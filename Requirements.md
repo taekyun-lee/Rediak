@@ -2,7 +2,7 @@
 - Distributed System을 구성하는데 필요한 지식들을 습득하고 각각의 trade-off를 비교하며 시스템을 설계해보기
 
 - [필수 구현 사항] 
-    - standalone in-memory kv store의 OOD 
+    - standalone in-memory kv store의 OOD //success
     - kv store의 최소한의 프로토콜 정의 (get, set, delete...), CLI로 시작해도 좋으나 networking을 지원
 
 -  [구현 시 우대 사항] 
