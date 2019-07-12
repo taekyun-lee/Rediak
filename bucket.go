@@ -50,27 +50,21 @@ type item struct {
 	//closefunc []func(v interface{})
 }
 
-func New(cinteval time.Duration, isactivecleanup bool) *Bucket {
+func New(cinteval time.Duration, name string) *Bucket {
 
 	var b *Bucket
-	if isactivecleanup{
-		// Active expiration with items.ttl
-		// Goroutine activeExpire
-		b = &Bucket{
-			expiringInterval: cinteval,
-			//TODO: Not implemented
-		}
-		go activeExpire(b)
-	}else{
-		// Passive expiration with items.ttl
-		// No activeExpire
-		b = &Bucket{
-			expiringInterval: nil,
-			//TODO: Not implemented
-		}
-
+	b = &Bucket{
+		name:name,
+		expiringInterval: cinteval,
+		//TODO: Not implemented
 	}
 
+	if cinteval !=0{
+		// Active expiration with items.ttl
+		// Goroutine activeExpire
+
+		go activeExpire(b)
+	}
 
 	return b
 
@@ -105,12 +99,24 @@ func (b *Bucket) GetInterval() time.Duration {
 	return b.expiringInterval
 }
 
-func (b *Bucket) SetInterval(t time.Duration) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-	b.expiringInterval = t
-
-}
+//func (b *Bucket) SetInterval(t time.Duration) {
+//	b.mu.Lock()
+//	defer b.mu.Unlock()
+//	if b.expiringInterval !=0 {
+//		if t ==0{
+//			//Kill active expiration goroutine
+//			b.closeExpire <- struct{}{}
+//
+//		}
+//		b.expiringInterval = t
+//	}else{
+//		if t !=0{
+//			b.expiringInterval = t
+//			go activeExpire(b)
+//		}
+//	}
+//
+//}
 
 func (b *Bucket) GET(key interface{}) (interface{},error){
 	v,ok := b.items.Load(key)
