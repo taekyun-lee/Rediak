@@ -34,7 +34,7 @@ type Bucket struct {
 
 type item struct {
 
-	//Real value of
+	//Real value of item
 	value interface{}
 	// 0 for string (string) 1 for byte list(binary) []byte  2 for list([]string) 4 for hashmap(map[string]string) 8 for sortedmap
 	dtype byte
@@ -99,24 +99,7 @@ func (b *Bucket) GetInterval() time.Duration {
 	return b.expiringInterval
 }
 
-//func (b *Bucket) SetInterval(t time.Duration) {
-//	b.mu.Lock()
-//	defer b.mu.Unlock()
-//	if b.expiringInterval !=0 {
-//		if t ==0{
-//			//Kill active expiration goroutine
-//			b.closeExpire <- struct{}{}
-//
-//		}
-//		b.expiringInterval = t
-//	}else{
-//		if t !=0{
-//			b.expiringInterval = t
-//			go activeExpire(b)
-//		}
-//	}
-//
-//}
+
 
 func (b *Bucket) GET(key interface{}) (interface{},error){
 	v,ok := b.items.Load(key)
