@@ -36,7 +36,7 @@ type item struct {
 
 	//Real value of item
 	value interface{}
-	// 0 for string (string) 1 for byte list(binary) []byte  2 for list([]string) 4 for hashmap(map[string]string) 8 for sortedmap
+	// 0 for string (string) 1 for byte list(binary) []byte 2 for numbers  4 for list([]string) 8 for hashmap(map[string]string) 16 for sortedmap
 	dtype byte
 	//Time-To-Live in seconds
 	ttl int64
@@ -67,7 +67,6 @@ func New(cinteval time.Duration, name string) *Bucket {
 	}
 
 	return b
-
 }
 
 func activeExpire(b *Bucket) {
