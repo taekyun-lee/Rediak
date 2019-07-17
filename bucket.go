@@ -1,76 +1,121 @@
 package KangDB
 
 import (
-	"encoding/binary"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 )
 
-type Bucket struct {
+type DB struct{
 
-	//Bucket name
-	name string
+	mu sync.RWMutex
+	bucks *Bucket // TODO : split bucket for lock delay
 
-	// Main hash table in this bucket : Where Items are contained, thread-safe by go sync package
-	// Key and values are arbitrary value, and type as interface{} in Go.
-	items sync.Map
+	logger *log.Logger // TODO : For logging algorithm
 
-	//Mutex for some reason
+
+	// For Persistence
+	snapshot interface{} // TODO :  For snapshot(persistence) implementation Interface struct
+	snapshotInverval time.Duration
+
+
+
+	// TTL Config
+	IsTTLActive bool // TTL algorithm active/passive
+	ActiveExpireInterval time.Duration
+	CloseExpire chan struct{}
+
+	//SplitBuckNum int // TODO : split bucket for lock delay
+
+
+	// Serializer
+	s Serializer
+
+
+
+	// Consistence hashing part TODO: Consistence hashing
+	// Consistence hashing part
+
+}
+
+
+
+type Bucket struct{
+
 	mu sync.RWMutex
 
-	// For cleanup channel for messaging
-	closeExpire chan struct{}
-	// Cleaning interval (when select active invalidation) in seconds
-	// If this value is nil, passive invalidation(in GET/SET method) will be activated
-	expiringInterval time.Duration
-
-	//TODO: NOT YET IMPLEMENTED -> Master-slave mechanism
-	//isMaster bool
-	//slaveList []*Bucket
-	//slaveNameList []string
+	d sync.Map // Use as map[string]item{}
 
 }
 
-type item struct {
+type item struct{
+	Value []byte
+	TTL int64
+	dtype int // string string  0 bytestream []byte 1 numbers int64 2 list_of_string []string  4 hashmap map[string]string 8 and etc
 
-	//Real value of item
-	value interface{}
-	// 0 for string (string) 1 for byte list(binary) []byte 2 for numbers  4 for list([]string) 8 for hashmap(map[string]string) 16 for sortedmap
-	dtype byte
-	//Time-To-Live in seconds
-	ttl int64
-
-	//TODO: NOT YET IMPLEMENTED -> time metadata (if needed)
-	//createdAt   time.Time
-	//accessedAt  time.Time
-	//accessCount int64
-
-	//TODO: Callback function when this item expired/deleted (if needed)
-	//closefunc []func(v interface{})
 }
+// get(raw) put(raw) delete isexists atomic-incr/decr close_bucket
 
-func New(cinteval time.Duration, name string) *Bucket {
 
-	var b *Bucket
-	b = &Bucket{
-		name:name,
-		expiringInterval: cinteval,
-		//TODO: Not implemented
+func (db *DB) Get(key string) (*item, error){
+	v, ok := db.bucks.d.Load(key)
+	var d item
+	if ok != true || v != nil {
+		// TODO: Logging [KeyNotExistError]
+		return nil, fmt.Errorf("[KeyNotExistError] data with key %s not exists.\n ",key)
 	}
 
-	if cinteval !=0{
-		// Active expiration with items.ttl
-		// Goroutine activeExpire
 
-		go activeExpire(b)
+	err := db.s.Unmarshal(v.([]byte),&d)
+	if err != nil{
+		// TODO: Logging [UnmarshalFailedError]
+		return nil, fmt.Errorf("[UnmarshalFailedError] data with key %s Failed unmarshalling.\n ",key)
+
 	}
 
-	return b
+	// Passive eviction
+	if !db.IsTTLActive && d.TTL < time.Now().UnixNano() {
+		// Delete key
+		db.bucks.d.Delete(key)
+		// TODO: Logging [Passive_KeyExpires]
+		return nil, fmt.Errorf("[Passive_KeyExpires] data with key %s expired and cannot use.\n ",key)
+	}
+
+	return &d, nil
+
 }
 
-func activeExpire(b *Bucket) {
-	ticker := time.NewTicker(b.expiringInterval)
+
+func (db *DB) Set(key string, ttl time.Duration)  error{
+
+}
+
+func (db *DB) Delete(key string) error{
+
+}
+
+func (db *DB) IsExist(key string) bool{
+	_,ok := db.bucks.d.Load(key)
+	return ok
+}
+
+func (db *DB) AtomicIncr(key string, delta int) error{
+
+}
+
+
+func (db *DB) AtomicDecr(key string, delta int) error{
+
+}
+
+func (db *DB) KickBucket() error{
+	db.bucks = &Bucket{}
+	return nil
+}
+
+func activeExpire(db DB) {
+	ticker := time.NewTicker(db.ActiveExpireInterval)
 	defer ticker.Stop()
 
 	for {
@@ -79,107 +124,16 @@ func activeExpire(b *Bucket) {
 		case <-ticker.C:
 			now := time.Now().UnixNano()
 
-			b.items.Range(func(key interface{}, value interface{}) bool {
-				ttlitem := value.(item).ttl
+			db.bucks.d.Range(func(key interface{}, value interface{}) bool {
+				ttlitem := value.(item).TTL
 				if ttlitem < now {
-					b.items.Delete(key)
+					db.bucks.d.Delete(key)
 				}
 				return true
 			})
-		case <-b.closeExpire:
+		case <-db.CloseExpire:
 			return
 		}
 	}
 }
-
-func (b *Bucket) GetInterval() time.Duration {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-	return b.expiringInterval
-}
-
-
-
-func (b *Bucket) GET(key interface{}) (interface{},error){
-	v,ok := b.items.Load(key)
-	if !ok{
-		// Value not found
-		return nil, fmt.Errorf("NotfoundError")
-	}
-	it:=v.(item)
-
-	if it.ttl >0 && it.ttl < time.Now().UnixNano(){
-		return nil, fmt.Errorf("TimeExpired")
-	}
-
-
-	return v, nil
-
-}
-
-func (b *Bucket) SET(key, value interface{}, ttl int64, dtype byte){
-	var exp int64
-
-	if ttl >0{
-		//Set with expiration time
-		exp = time.Now().Add(time.Second * time.Duration(ttl)).UnixNano()
-	}else{
-		// Will Not be expired
-		exp=0
-	}
-
-	v := item{
-		value:value,
-		dtype:dtype,
-		ttl:exp,
-	}
-	b.items.Store(key,v)
-
-}
-
-func (b *Bucket) DELETE(key interface{}) error {
-	b.items.Delete(key)
-	return nil
-}
-
-
-func (b *Bucket) CLOSE()  {
-	b.closeExpire <- struct{}{}
-	b.items = sync.Map{}
-}
-
-
-func (b *Bucket) REFRESH(key interface{},ttl int64) error {
-	v, ok := b.items.Load(key)
-	var exp int64
-	if !ok {
-		// Value not found
-		return fmt.Errorf("NotfoundError")
-	}
-	it := v.(item)
-
-	if ttl >0{
-		//Set with expiration time
-		exp = time.Now().Add(time.Second * time.Duration(ttl)).UnixNano()
-	}else{
-		// Will Not be expired
-		exp=0
-	}
-	// Refresh item's TTL with current time and parameter
-	it.ttl = exp
-
-	b.items.Store(key,it)
-	return nil
-}
-
-func (b *Bucket) CONTAINS(key interface{}) bool {
-	_,ok:=b.items.Load(key)
-	return ok
-}
-
-func (b *Bucket) BUCKETSIZE() int{
-	return binary.Size(b.items)
-}
-
-
 
