@@ -1,185 +1,293 @@
 package KangDB
 
 import (
-	"fmt"
+	"reflect"
+	"sync"
 	"testing"
 	"time"
 )
 
-var (
-
-)
-
-func TestBucket_GetInterval(t *testing.T) {
-
-	bzero := Bucket{
-		name:"testname",
-		expiringInterval:0,
-
+func Test_newShardmap(t *testing.T) {
+	type args struct {
+		shardNum int
 	}
-	rzero := bzero.GetInterval()
-	if rzero != 0{
-		t.Errorf("Get interval error orig : %d, test: %s\n ",bzero.expiringInterval,rzero.String())
+	tests := []struct {
+		name string
+		args args
+		want shardmap
+	}{
+		// TODO: Add test cases.
 	}
-
-	b := Bucket{
-		name:"testname",
-		expiringInterval:10*time.Second,
-
-	}
-	r := b.GetInterval()
-	if r !=10*time.Second {
-		t.Errorf("Get interval error orig : %d, test: %s\n ",b.expiringInterval,r.String())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := newShardmap(tt.args.shardNum); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("newShardmap() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
-func TestBucket_SET(t *testing.T) {
-	bzero := Bucket{
-		name:"testname",
-		expiringInterval:0,
 
+func TestNew(t *testing.T) {
+	tests := []struct {
+		name string
+		want DBInstance
+	}{
+		// TODO: Add test cases.
 	}
-	//No exp, kv exists
-
-	bzero.SET("1","starbucks",0,1)
-
-	v,ok:= bzero.items.Load("1")
-	if ok != true {
-		t.Errorf("Set failed all ")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := New(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("New() = %v, want %v", got, tt.want)
+			}
+		})
 	}
-
-	va:= v.(item)
-	fmt.Println(va)
-
-	if va.ttl != 0 || va.dtype != 1 || va.value !="starbucks"{
-		t.Errorf("Set value failed  ")
-	}
-
-	bone := Bucket{
-		name:"testname",
-		expiringInterval:5,
-
-	}
-	//Has exp, kv exists
-
-	bone.SET("1","starbucks",3,1)
-
-	v,ok = bzero.items.Load("1")
-	if ok != true {
-		t.Errorf("Set failed all ")
-	}
-
-	va = v.(item)
-	fmt.Println(va)
-
-	if va.ttl != 0 || va.dtype != 1 || va.value !="starbucks"{
-		t.Errorf("Set value failed  ")
-	}
-
-
 }
 
-func TestBucket_GET(t *testing.T) {
-	//no exp
-	b := Bucket{
-		name:"testname",
-		expiringInterval:0,
+func TestDBInstance_GetShard(t *testing.T) {
+	type fields struct {
+		mu               sync.RWMutex
+		bucket           shardmap
+		shardNum         int
+		IsActiveEviction bool
+		activeeviction   chan struct{}
+		EvictionInterval time.Duration
+		hf               Hashfunc
 	}
-
-	stritem := item{
-		value:"asdfasdfasdf",
-		ttl:time.Now().Add(3*time.Second).UnixNano(),
-		dtype:1,
+	type args struct {
+		key string
 	}
-
-	listitem := item{
-		value:[]string{"asdf","qwer","zxcv"},
-		ttl:time.Now().Add(3*time.Second).UnixNano(),
-		dtype:1,
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   *mapwithmutex
+	}{
+		// TODO: Add test cases.
 	}
-
-	b.items.Store("1",stritem)
-	b.items.Store("2",listitem)
-
-
-	strget , strok := b.GET("1")
-	listget , listok := b.GET("1")
-
-
-	if (strok != nil) || (strget.(item) != stritem) {
-		t.Errorf("get failed all ")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := &DBInstance{
+				mu:               tt.fields.mu,
+				bucket:           tt.fields.bucket,
+				shardNum:         tt.fields.shardNum,
+				IsActiveEviction: tt.fields.IsActiveEviction,
+				activeeviction:   tt.fields.activeeviction,
+				EvictionInterval: tt.fields.EvictionInterval,
+				hf:               tt.fields.hf,
+			}
+			if got := db.GetShard(tt.args.key); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("DBInstance.GetShard() = %v, want %v", got, tt.want)
+			}
+		})
 	}
-	if (listok != nil) || (listget.(item).value != stritem.value) {
-		t.Errorf("get failed all ")
+}
+
+func TestDBInstance_Get(t *testing.T) {
+	type fields struct {
+		mu               sync.RWMutex
+		bucket           shardmap
+		shardNum         int
+		IsActiveEviction bool
+		activeeviction   chan struct{}
+		EvictionInterval time.Duration
+		hf               Hashfunc
 	}
-
-	time.Sleep(3*time.Second)
-
-
-
-	strget , strok = b.GET("1")
-	listget , listok = b.GET("1")
-
-
-	if (strok == nil)  {
-		t.Errorf("get passive expiration failed ")
+	type args struct {
+		key string
 	}
-	if (listok == nil) {
-		t.Errorf("get passive expiration failed ")
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    Item
+		wantErr bool
+	}{
+		// TODO: Add test cases.
 	}
-
-
-
-
-
-//active Expiration
-
-	//no exp
-	b = Bucket{
-		name:"testname",
-		expiringInterval:5*time.Second,
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := &DBInstance{
+				mu:               tt.fields.mu,
+				bucket:           tt.fields.bucket,
+				shardNum:         tt.fields.shardNum,
+				IsActiveEviction: tt.fields.IsActiveEviction,
+				activeeviction:   tt.fields.activeeviction,
+				EvictionInterval: tt.fields.EvictionInterval,
+				hf:               tt.fields.hf,
+			}
+			got, err := db.Get(tt.args.key)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DBInstance.Get() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("DBInstance.Get() = %v, want %v", got, tt.want)
+			}
+		})
 	}
+}
 
-	stritem = item{
-		value:"asdfasdfasdf",
-		ttl:time.Now().Add(3*time.Second).UnixNano(),
-		dtype:1,
+func TestDBInstance_Set(t *testing.T) {
+	type fields struct {
+		mu               sync.RWMutex
+		bucket           shardmap
+		shardNum         int
+		IsActiveEviction bool
+		activeeviction   chan struct{}
+		EvictionInterval time.Duration
+		hf               Hashfunc
 	}
-
-	listitem = item{
-		value:[]string{"asdf","qwer","zxcv"},
-		ttl:time.Now().Add(3*time.Second).UnixNano(),
-		dtype:1,
+	type args struct {
+		key   string
+		value interface{}
+		ttl   int64
 	}
-
-	b.items.Store("1",stritem)
-	b.items.Store("2",listitem)
-
-
-	strget , strok = b.GET("1")
-	listget , listok = b.GET("1")
-
-
-	if (strok != nil) || (strget.(item) != stritem) {
-		t.Errorf("get failed all ")
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		// TODO: Add test cases.
 	}
-	if (listok != nil) || (listget.(item).value != stritem.value) {
-		t.Errorf("get failed all ")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := &DBInstance{
+				mu:               tt.fields.mu,
+				bucket:           tt.fields.bucket,
+				shardNum:         tt.fields.shardNum,
+				IsActiveEviction: tt.fields.IsActiveEviction,
+				activeeviction:   tt.fields.activeeviction,
+				EvictionInterval: tt.fields.EvictionInterval,
+				hf:               tt.fields.hf,
+			}
+			db.Set(tt.args.key, tt.args.value, tt.args.ttl)
+		})
 	}
+}
 
-	time.Sleep(5*time.Second)
-
-
-
-	strget , strok = b.GET("1")
-	listget , listok = b.GET("1")
-
-
-	if (strok == nil)  {
-		t.Errorf("get active expiration failed ")
+func TestDBInstance_Delete(t *testing.T) {
+	type fields struct {
+		mu               sync.RWMutex
+		bucket           shardmap
+		shardNum         int
+		IsActiveEviction bool
+		activeeviction   chan struct{}
+		EvictionInterval time.Duration
+		hf               Hashfunc
 	}
-	if (listok == nil) {
-		t.Errorf("get active expiration failed ")
+	type args struct {
+		key string
 	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := &DBInstance{
+				mu:               tt.fields.mu,
+				bucket:           tt.fields.bucket,
+				shardNum:         tt.fields.shardNum,
+				IsActiveEviction: tt.fields.IsActiveEviction,
+				activeeviction:   tt.fields.activeeviction,
+				EvictionInterval: tt.fields.EvictionInterval,
+				hf:               tt.fields.hf,
+			}
+			if err := db.Delete(tt.args.key); (err != nil) != tt.wantErr {
+				t.Errorf("DBInstance.Delete() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
 
+func TestDBInstance_IsExists(t *testing.T) {
+	type fields struct {
+		mu               sync.RWMutex
+		bucket           shardmap
+		shardNum         int
+		IsActiveEviction bool
+		activeeviction   chan struct{}
+		EvictionInterval time.Duration
+		hf               Hashfunc
+	}
+	type args struct {
+		key string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := &DBInstance{
+				mu:               tt.fields.mu,
+				bucket:           tt.fields.bucket,
+				shardNum:         tt.fields.shardNum,
+				IsActiveEviction: tt.fields.IsActiveEviction,
+				activeeviction:   tt.fields.activeeviction,
+				EvictionInterval: tt.fields.EvictionInterval,
+				hf:               tt.fields.hf,
+			}
+			if got := db.IsExists(tt.args.key); got != tt.want {
+				t.Errorf("DBInstance.IsExists() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
 
+func Test_activeEviction(t *testing.T) {
+	type args struct {
+		db *DBInstance
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			activeEviction(tt.args.db)
+		})
+	}
+}
+
+func TestDBInstance_GracefulCloseDB(t *testing.T) {
+	type fields struct {
+		mu               sync.RWMutex
+		bucket           shardmap
+		shardNum         int
+		IsActiveEviction bool
+		activeeviction   chan struct{}
+		EvictionInterval time.Duration
+		hf               Hashfunc
+	}
+	tests := []struct {
+		name   string
+		fields fields
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := &DBInstance{
+				mu:               tt.fields.mu,
+				bucket:           tt.fields.bucket,
+				shardNum:         tt.fields.shardNum,
+				IsActiveEviction: tt.fields.IsActiveEviction,
+				activeeviction:   tt.fields.activeeviction,
+				EvictionInterval: tt.fields.EvictionInterval,
+				hf:               tt.fields.hf,
+			}
+			db.GracefulCloseDB()
+		})
+	}
 }

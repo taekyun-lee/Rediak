@@ -2,153 +2,188 @@ package KangDB
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"time"
 )
 
-type DB struct{
-
-	mu sync.RWMutex
-	bucks *Bucket // TODO : split bucket for lock delay
-
-	logger *log.Logger // TODO : For logging algorithm
-
-
-	// For Persistence
-	snapshot interface{} // TODO :  For snapshot(persistence) implementation Interface struct
-	snapshotInverval time.Duration
+// TODO : Read configuration from files
+var(
+	SHARDNUM = 32
+)
 
 
 
-	// TTL Config
-	IsTTLActive bool // TTL algorithm active/passive
-	ActiveExpireInterval time.Duration
-	CloseExpire chan struct{}
-
-	//SplitBuckNum int // TODO : split bucket for lock delay
-
-
-	// Serializer
-	s Serializer
+type shardmap []*mapwithmutex
 
 
 
-	// Consistence hashing part TODO: Consistence hashing
-	// Consistence hashing part
-
+type mapwithmutex struct{
+	d map[string]Item
+	sync.RWMutex
 }
 
+type Item struct{
+	v interface{}
+	ttl int64
+}
 
-
-type Bucket struct{
-
+type DBInstance struct{
 	mu sync.RWMutex
 
-	d sync.Map // Use as map[string]item{}
+	bucket shardmap
+	shardNum int
+
+	//// TESTING
+	//wg sync.WaitGroup
+	//pool sync.Pool
+
+	// TODO: Eviction config
+
+	IsActiveEviction bool
+	activeeviction chan struct{}
+	EvictionInterval time.Duration
+
+
+	// TODO: Snapshot config
+	//IsAsyncSnapshot bool
+	//SnapshotInterval time.Duration
+
+
+	// TODO:Consistent hashing config
+	hf Hashfunc
 
 }
 
-type item struct{
-	Value []byte
-	TTL int64
-	dtype int // string string  0 bytestream []byte 1 numbers int64 2 list_of_string []string  4 hashmap map[string]string 8 and etc
+func newShardmap (shardNum int) shardmap{
+	m := make(shardmap,shardNum)
+	for i:=0;i<shardNum;i++{
+		m[i] = &mapwithmutex{
+			d:make(map[string]Item),
 
+		}
+	}
+	return m
 }
-// get(raw) put(raw) delete isexists atomic-incr/decr close_bucket
 
 
-func (db *DB) Get(key string) (*item, error){
-	v, ok := db.bucks.d.Load(key)
-	var d item
-	if ok != true || v != nil {
-		// TODO: Logging [KeyNotExistError]
-		return nil, fmt.Errorf("[KeyNotExistError] data with key %s not exists.\n ",key)
+
+func New() DBInstance{
+
+	db:= DBInstance{
+		bucket:newShardmap(SHARDNUM),
+		hf:crc32Hash,
+		// TODO: Lots of config files like eviction config
+		IsActiveEviction:false, // for config, default to passive(false)
+
+	}
+
+	if db.IsActiveEviction{
+		go activeEviction(&db)
 	}
 
 
-	err := db.s.Unmarshal(v.([]byte),&d)
-	if err != nil{
-		// TODO: Logging [UnmarshalFailedError]
-		return nil, fmt.Errorf("[UnmarshalFailedError] data with key %s Failed unmarshalling.\n ",key)
+	return db
+}
 
+func (db *DBInstance)GetShard(key string) *mapwithmutex{
+	return db.bucket[db.hf(key)%uint32(SHARDNUM)]
+}
+
+// GET-done, SET-done , DELETE-done, ISEXIST, CLOSE
+
+
+func (db *DBInstance)Get(key string) (Item, error){
+	shardmap := db.GetShard(key)
+	shardmap.RLock()
+	v, ok := shardmap.d[key]
+	if !ok {
+		shardmap.RUnlock()
+		return Item{}, fmt.Errorf("KeyNotExists")
 	}
 
 	// Passive eviction
-	if !db.IsTTLActive && d.TTL < time.Now().UnixNano() {
-		// Delete key
-		db.bucks.d.Delete(key)
-		// TODO: Logging [Passive_KeyExpires]
-		return nil, fmt.Errorf("[Passive_KeyExpires] data with key %s expired and cannot use.\n ",key)
-	}
+	if !db.IsActiveEviction && v.ttl < time.Now().UnixNano(){
+		shardmap.RUnlock()
+		return Item{}, fmt.Errorf("KeyItemExpired")
 
-	return &d, nil
+	}
+	shardmap.RUnlock()
+	return v, nil
 
 }
 
 
-func (db *DB) Set(key string, v interface{}, ttl time.Duration, dtype int)  error{
-	marv, ok := db.s.Marshal(v)
-	if ok != nil{
-		// TODO: Logging [marshalFailedError]
-		return fmt.Errorf("[marshalFailedError] data with key %s Failed marshalling.\n ",key)
+func (db *DBInstance)Set(key string, value interface{}, ttl int64) {
+	shardmap := db.GetShard(key)
+
+	d := Item{
+		v:value,
+		ttl:ttl,
+	}
+	shardmap.Lock()
+	shardmap.d[key] = d
+	shardmap.Unlock()
+
+}
+
+func (db *DBInstance)Delete(key string) error{
+	shardmap := db.GetShard(key)
+	if _, ok := shardmap.d[key];!ok{
+		return fmt.Errorf("KeyItemNotExists")
 	}
 
-	d := item{
-		Value:marv,
-		TTL:time.Now().Add(ttl).UnixNano(),
-		dtype:dtype,
-
-	}
-	db.bucks.d.Store(key,d)
-
+	shardmap.Lock()
+	delete(shardmap.d,key)
+	shardmap.Unlock()
 	return nil
-
 }
 
-func (db *DB) Delete(key string) {
-	db.bucks.d.Delete(key)
-}
+func (db *DBInstance)IsExists(key string) bool{
+	shardmap := db.GetShard(key)
 
-func (db *DB) IsExist(key string) bool{
-	_,ok := db.bucks.d.Load(key)
+	_, ok := shardmap.d[key]
 	return ok
 }
 
-func (db *DB) AtomicIncr(key string, delta int) error{
+func activeEviction(db *DBInstance){
+	ticker := time.NewTicker(db.EvictionInterval)
 
-}
-
-
-func (db *DB) AtomicDecr(key string, delta int) error{
-
-}
-
-func (db *DB) KickBucket() error{
-	db.bucks = &Bucket{}
-	return nil
-}
-
-func activeExpire(db DB) {
-	ticker := time.NewTicker(db.ActiveExpireInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-
+	for{
+		select{
 		case <-ticker.C:
-			now := time.Now().UnixNano()
-
-			db.bucks.d.Range(func(key interface{}, value interface{}) bool {
-				ttlitem := value.(item).TTL
-				if ttlitem < now {
-					db.bucks.d.Delete(key)
+			for _,shardmap := range db.bucket{
+				shardmap.Lock()
+				for k,v := range shardmap.d{
+					if v.ttl < time.Now().UnixNano(){
+						delete(shardmap.d, k)
+					}
 				}
-				return true
-			})
-		case <-db.CloseExpire:
-			return
+
+				shardmap.Unlock()
+
+
+
+			}
+			case <-db.activeeviction:
+				return
 		}
 	}
+
 }
+
+func (db *DBInstance)GracefulCloseDB() {
+
+	db.mu.Lock()
+	db.activeeviction<- struct{}{}
+	db.bucket = shardmap{}
+	// TODO : Log db close
+	// TODO : Other db close func
+	db.mu.Unlock()
+
+}
+
+
+
+
+
 
