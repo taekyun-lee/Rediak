@@ -87,12 +87,27 @@ func (db *DB) Get(key string) (*item, error){
 }
 
 
-func (db *DB) Set(key string, ttl time.Duration)  error{
+func (db *DB) Set(key string, v interface{}, ttl time.Duration, dtype int)  error{
+	marv, ok := db.s.Marshal(v)
+	if ok != nil{
+		// TODO: Logging [marshalFailedError]
+		return fmt.Errorf("[marshalFailedError] data with key %s Failed marshalling.\n ",key)
+	}
+
+	d := item{
+		Value:marv,
+		TTL:time.Now().Add(ttl).UnixNano(),
+		dtype:dtype,
+
+	}
+	db.bucks.d.Store(key,d)
+
+	return nil
 
 }
 
-func (db *DB) Delete(key string) error{
-
+func (db *DB) Delete(key string) {
+	db.bucks.d.Delete(key)
 }
 
 func (db *DB) IsExist(key string) bool{
