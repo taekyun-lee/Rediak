@@ -7,7 +7,7 @@ import (
 )
 
 // TODO : Read configuration from files
-var(
+const(
 	SHARDNUM = 32
 )
 
@@ -67,18 +67,21 @@ func newShardmap (shardNum int) shardmap{
 
 
 
-func New() DBInstance{
+func New(isactive bool,interval time.Duration) DBInstance{
 
 	db:= DBInstance{
 		bucket:newShardmap(SHARDNUM),
 		hf:crc32Hash,
 		// TODO: Lots of config files like eviction config
-		IsActiveEviction:false, // for config, default to passive(false)
+		IsActiveEviction:isactive, // for config, default to passive(false)
+
 
 	}
 
 	if db.IsActiveEviction{
+		db.EvictionInterval=interval
 		go activeEviction(&db)
+
 	}
 
 
@@ -102,7 +105,7 @@ func (db *DBInstance)Get(key string) (Item, error){
 	}
 
 	// Passive eviction
-	if !db.IsActiveEviction && v.ttl < time.Now().UnixNano(){
+	if !db.IsActiveEviction && v.ttl >0 && v.ttl < time.Now().UnixNano(){
 		shardmap.RUnlock()
 		return Item{}, fmt.Errorf("KeyItemExpired")
 
@@ -122,6 +125,7 @@ func (db *DBInstance)Set(key string, value interface{}, ttl int64) {
 	}
 	shardmap.Lock()
 	shardmap.d[key] = d
+
 	shardmap.Unlock()
 
 }
@@ -154,7 +158,7 @@ func activeEviction(db *DBInstance){
 			for _,shardmap := range db.bucket{
 				shardmap.Lock()
 				for k,v := range shardmap.d{
-					if v.ttl < time.Now().UnixNano(){
+					if v.ttl > 0 &&  v.ttl < time.Now().UnixNano(){
 						delete(shardmap.d, k)
 					}
 				}

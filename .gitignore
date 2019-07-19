@@ -932,3 +932,7 @@ healthchecksdb
 MigrationBackup/
 
 # End of https://www.gitignore.io/api/c,go,c++,node,java,redis,linux,macos,python,windows,eclipse,virtualenv,visualstudio,jetbrains+all,visualstudiocode,jupyternotebooks
+
+
+tmp/
+refs/
