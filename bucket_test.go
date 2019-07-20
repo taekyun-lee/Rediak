@@ -232,10 +232,55 @@ func TestDBInstance_Delete(t *testing.T) {
 }
 
 func TestDBInstance_IsExists(t *testing.T) {
+	anew := New(true, 1*time.Second)
+	pnew := New(false,1*time.Second)
 
+
+
+
+	anew.Set("key1exp", "expired in 1 sec",time.Now().Add(1*time.Second).UnixNano())
+	anew.Set("key5exp", "expired in 5 sec",time.Now().Add(5*time.Second).UnixNano())
+	anew.Set("keynotexp", "not exp",0)
+	time.Sleep(3*time.Second)
+
+	anew.Delete("key5exp")
+
+
+	if ok:=anew.IsExists("key1exp");ok{
+		t.Errorf("key1exp existsterror w/ error ")
+	}
+
+	if ok:=anew.IsExists("key5exp");ok  {
+		t.Errorf("key5exp existsterror")
+	}
+
+	if ok:=anew.IsExists("keynotexp");!ok {
+		t.Errorf("keynotexp existsterror")
+	}
+
+
+	pnew.Set("key1exp", "expired in 1 sec",time.Now().Add(1*time.Second).UnixNano())
+	pnew.Set("key5exp", "expired in 5 sec",time.Now().Add(5*time.Second).UnixNano())
+	pnew.Set("keynotexp", "not exp",0)
+
+	time.Sleep(3*time.Second)
+
+
+	pnew.Delete("key5exp")
+
+
+
+	if ok:=pnew.IsExists("key1exp");ok{
+		t.Errorf("key1exp existsterror w/ error ")
+	}
+
+	if ok:=pnew.IsExists("key5exp");ok  {
+		t.Errorf("key5exp existsterror")
+	}
+
+	if ok:=pnew.IsExists("keynotexp");!ok {
+		t.Errorf("keynotexp existsterror")
+	}
 }
 
 
-func TestDBInstance_GracefulCloseDB(t *testing.T) {
-
-}

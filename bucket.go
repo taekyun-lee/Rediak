@@ -145,7 +145,10 @@ func (db *DBInstance)Delete(key string) error{
 func (db *DBInstance)IsExists(key string) bool{
 	shardmap := db.GetShard(key)
 
-	_, ok := shardmap.d[key]
+	v, ok := shardmap.d[key]
+	if v.ttl > 0{
+		return ok && (v.ttl > time.Now().UnixNano())
+	}
 	return ok
 }
 
