@@ -6,9 +6,9 @@
     - kv store의 최소한의 프로토콜 정의 (get, set, delete...), CLI로 시작해도 좋으나 networking을 지원
 
 -  [구현 시 우대 사항] 
-    - value type이 collection인 entry 지원(list, hashmap 등) 많을수록 좋음 (easy)
-    - entry에 TTL 지원 (medium)
-    - primitive key-value entry에 대해 concurrent operation 지원 (test and set) (medium)
+    - value type이 collection인 entry 지원(list, hashmap 등) 많을수록 좋음 (easy) ->yes, list, hashmap avaliable
+    - entry에 TTL 지원 (medium) -> yes,with active ttl/ passive ttl eviction algorithm
+    - primitive key-value entry에 대해 concurrent operation 지원 (test and set) (medium) -> yes
     - persistent 지원 (medium)
     - multithreaded 모델로 변경 시도 (redis는 싱글 스레드), 같은 키에 대해서는 serializability 지원 (medium~hard)
     - distributed로 확장, fail-over 고려 (hard)
