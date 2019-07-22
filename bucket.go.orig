@@ -2,16 +2,13 @@ package KangDB
 
 import (
 	"fmt"
-	"runtime"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
 // TODO : Read configuration from files
 const(
 	SHARDNUM = 32
-	DEFAULTLISTSIZE = 10
 )
 
 
@@ -181,74 +178,7 @@ func activeEviction(db *DBInstance){
 
 }
 
-func (db *DBInstance)GC() {
-	// USE WITH CAUTION, IT BLOCKS ENTIRE DB!!!!!
-	runtime.GC()
-}
-
-func (db *DBInstance)MGet(key []string) ([]Item, error){
-	ret := make([]Item,len(key))
-	for i,k :=range key{
-		shardmap := db.GetShard(k)
-		shardmap.RLock()
-		v, ok := shardmap.d[k]
-
-		if !ok {
-			ret[i] = Item{}
-			//shardmap.RUnlock()
-			//return Item{}, fmt.Errorf("KeyNotExists")
-		}
-
-		// Passive eviction
-		if !db.IsActiveEviction && v.ttl >0 && v.ttl < time.Now().UnixNano(){
-			ret[i] = Item{}
-			//shardmap.RUnlock()
-			//return Item{}, fmt.Errorf("KeyItemExpired")
-
-		}
-		ret[i] = v
-		shardmap.RUnlock()
-	}
-
-
-	return ret, nil
-
-}
-
-
-func (db *DBInstance)MSet(key []string, value []interface{}, ttl int64) {
-	for i:=0;i<len(key);i++{
-		shardmap := db.GetShard(key[i])
-
-		d := Item{
-			v:value[i],
-			ttl:ttl,
-		}
-		shardmap.Lock()
-		shardmap.d[key[i]] = d
-
-		shardmap.Unlock()
-
-	}
-
-}
-
-func (db *DBInstance)AtomicIncr(key string, delta int64) (int64, error){
-	shardmap := db.GetShard(key)
-	v,ok := shardmap.d[key]
-	if !ok{
-		return 0, fmt.Errorf("Keynotexists")
-	}
-	if _, castok := v.v.(int64); castok {
-		atomic.AddInt64(v.v.(*int64),delta)
-		return v.v.(int64), nil
-	}
-	return 0, fmt.Errorf("Keynotexists")
-
-}
-
-
-func (db *DBInstance)Close() {
+func (db *DBInstance)GracefulCloseDB() {
 
 	db.mu.Lock()
 	db.activeeviction<- struct{}{}

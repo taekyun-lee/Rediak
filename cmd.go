@@ -1,25 +1,39 @@
 package KangDB
 
-import "sync"
+import "github.com/tidwall/redcon"
 
-type instance struct{
-	mu sync.Mutex
+type CmdInterface func(c CmdContext)
 
-	b Bucket
-
-
-	// Persistence
-	persistInstance ZippedSnapshot
-	snapshotfolder string
-	snapshotname string
-
-
-	//Metadata of instance
-	ipaddr string
-	portnum uint
-
+type CmdContext struct{
+	redcon.Conn
+	db KVinterface
+	cmd string
+	args []string
+	retval interface{}
 }
 
+//type DB interface {
+//	Incr(k string, by int64) (int64, error)
+//	Set(k, v string, ttl int) error .
+//	MSet(data map[string]string) error.
+//	Get(k string) (string, error) .
+//	MGet(keys []string) []string.
+//	TTL(key string) int64
+//	Del(keys []string) error .
+//	Scan(ScannerOpt ScannerOptions) error n
+//	Size() int64
+//	GC() error.
+//	Close().
+//}
+type KVinterface interface {
+	Get(key string) (Item, error)
+	Set(key string, value interface{}, ttl int64)
+	MGet(key []string) ([]Item, error)
+	MSet(key []string, value []interface{}, ttl int64)
+	AtomicIncr(key string, by int64) (int64, error)
+	Delete(key string) error
+	IsExists(key string) bool
+	GC()
+	Close()
 
-
-
+}
