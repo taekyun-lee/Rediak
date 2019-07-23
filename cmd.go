@@ -1,4 +1,7 @@
+// https://github.com/alash3al/redix
+// Thanks
 package KangDB
+
 
 import "github.com/tidwall/redcon"
 
@@ -12,19 +15,6 @@ type CmdContext struct{
 	retval interface{}
 }
 
-//type DB interface {
-//	Incr(k string, by int64) (int64, error)
-//	Set(k, v string, ttl int) error .
-//	MSet(data map[string]string) error.
-//	Get(k string) (string, error) .
-//	MGet(keys []string) []string.
-//	TTL(key string) int64
-//	Del(keys []string) error .
-//	Scan(ScannerOpt ScannerOptions) error n
-//	Size() int64
-//	GC() error.
-//	Close().
-//}
 type KVinterface interface {
 	Get(key string) (Item, error)
 	Set(key string, value interface{}, ttl int64)
@@ -37,3 +27,45 @@ type KVinterface interface {
 	Close()
 
 }
+
+var (
+	CMDLIST= map[string]CmdInterface{
+"set":    string_set,
+"mset":   string_mset,
+"get":    string_get,
+"mget":   string_mget,
+"del":    string_del,
+"exists": string_exists,
+"incr":   string_incr,
+"ttl": string_ttl,
+
+// lists
+"lpush":      lpushCommand,
+"lpushu":     lpushuCommand,
+"lrange":     lrangeCommand,
+"lrem":       lremCommand,
+"lcount":     lcountCommand,
+"lcard":      lcountCommand,
+"lsrch":      lsearchCommand,
+"lsrchcount": lsearchcountCommand,
+
+// hashes
+"hset":    hsetCommand,
+"hget":    hgetCommand,
+"hdel":    hdelCommand,
+"hgetall": hgetallCommand,
+"hkeys":   hkeysCommand,
+"hmset":   hmsetCommand,
+"hexists": hexistsCommand,
+"hincr":   hincrCommand,
+"httl":    httlCommand,
+"hlen":    hlenCommand,
+
+// utils
+"gc":       gcCommand,
+"info":     infoCommand,
+"echo":     echoCommand,
+"flushdb":  flushdbCommand,
+"flushall": flushallCommand,
+}
+)

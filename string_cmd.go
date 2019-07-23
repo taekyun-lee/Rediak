@@ -100,7 +100,7 @@ func string_mset(c CmdContext) {
 func string_mget(c CmdContext) {
 	lenargs := len(c.args)
 
-	if lenargs < 2{
+	if lenargs < 1{
 		c.WriteError("[CmdArgError]MGET cmd at least 1 elements (GET key [key2] )")
 		return
 	}
@@ -124,5 +124,89 @@ func string_mget(c CmdContext) {
 	}
 
 }
+
+
+func string_del(c CmdContext){
+	lenargs := len(c.args)
+
+	if lenargs < 1{
+		c.WriteError("[CmdArgError]DEL cmd at least 1 elements (DEL key [key2] )")
+		return
+	}
+	for _,k := range c.args{
+		if err := c.db.Delete(k);err!=nil{
+			c.WriteError(err.Error())
+			return
+		}
+	}
+	c.WriteString("OK")
+}
+
+func string_exists(c CmdContext){
+	lenargs := len(c.args)
+
+	if lenargs != 1{
+		c.WriteError("[CmdArgError]EXIST cmd exact 1 elements (EXISTS key )")
+		return
+	}
+
+	if ok:=c.db.IsExists(c.args[0]);ok{
+		c.WriteString("1")
+		return
+	}
+
+	c.WriteString("0")
+	return
+
+}
+
+
+func string_incr(c CmdContext){
+	var err error
+	var delta int
+	lenargs := len(c.args)
+
+	if lenargs < 1{
+		c.WriteError("[CmdArgError]INCR cmd at least 1 elements (INCR key [value] )")
+		return
+	}
+	key := c.args[0]
+	if lenargs > 1{
+		delta,err = strconv.Atoi(c.args[1])
+		if err != nil{
+			c.WriteError(err.Error())
+			return
+		}
+	}else{
+		delta=10
+	}
+
+	v,err := c.db.AtomicIncr(key,int64(delta))
+	if err != nil{
+		c.WriteError(err.Error())
+		return
+	}
+
+	c.WriteInt64(v)
+
+}
+
+
+func string_ttl(c CmdContext) {
+	if len(c.args) != 2 {
+		c.WriteError("[CmdArgError]TTL cmd has exact 2 elements (GET key )")
+		return
+	}
+	key := c.args[0]
+	v, err := c.db.Get(key)
+
+	if err != nil {
+		c.WriteError(err.Error())
+		return
+	}
+	c.WriteInt64(v.ttl)
+}
+
+
 
 

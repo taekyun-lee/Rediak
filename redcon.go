@@ -1,79 +1,80 @@
+// Copyright 2018 The Redix Authors. All rights reserved.
+// Use of this source code is governed by a Apache 2.0
+// license that can be found in the LICENSE file.
 package KangDB
 
-
 import (
-"log"
-"strings"
-"sync"
+	"fmt"
+	"log"
+	"strings"
 
-"github.com/tidwall/redcon"
+	"github.com/tidwall/redcon"
 )
 
-var addr = ":6380"
-
-func main() {
-	var mu sync.RWMutex
-	var items = make(map[string][]byte)
-	go log.Printf("started server at %s", addr)
-	err := redcon.ListenAndServe(addr,
+func initRespServer() error {
+	return redcon.ListenAndServe(
+		respaddr,
 		func(conn redcon.Conn, cmd redcon.Command) {
-			switch strings.ToLower(string(cmd.Args[0])) {
-			default:
-				conn.WriteError("ERR unknown command '" + string(cmd.Args[0]) + "'")
-			case "ping":
+			// handles any panic
+			defer (func() {
+				if err := recover(); err != nil {
+					conn.WriteError(fmt.Sprintf("fatal error: %s", (err.(error)).Error()))
+				}
+			})()
+
+			// fetch the connection context
+			// normalize the todo action "command"
+			// normalize the command arguments
+			ctx := (conn.Context()).(map[string]interface{})
+			todo := strings.TrimSpace(strings.ToLower(string(cmd.Args[0])))
+			args := []string{}
+			for _, v := range cmd.Args[1:] {
+				v := strings.TrimSpace(string(v))
+				args = append(args, v)
+			}
+
+
+
+
+			// set the default db if there is no db selected
+			if ctx["db"] == nil || ctx["db"].(string) == "" {
+				ctx["db"] = "0"
+			}
+
+
+
+			// internal ping-pong
+			if todo == "ping" {
 				conn.WriteString("PONG")
-			case "quit":
+				return
+			}
+
+			// close the connection
+			if todo == "quit" {
 				conn.WriteString("OK")
 				conn.Close()
-			case "set":
-				if len(cmd.Args) != 3 {
-					conn.WriteError("ERR wrong number of arguments for '" + string(cmd.Args[0]) + "' command")
-					return
-				}
-				mu.Lock()
-				items[string(cmd.Args[1])] = cmd.Args[2]
-				mu.Unlock()
-				conn.WriteString("OK")
-			case "get":
-				if len(cmd.Args) != 2 {
-					conn.WriteError("ERR wrong number of arguments for '" + string(cmd.Args[0]) + "' command")
-					return
-				}
-				mu.RLock()
-				val, ok := items[string(cmd.Args[1])]
-				mu.RUnlock()
-				if !ok {
-					conn.WriteNull()
-				} else {
-					conn.WriteBulk(val)
-				}
-			case "del":
-				if len(cmd.Args) != 2 {
-					conn.WriteError("ERR wrong number of arguments for '" + string(cmd.Args[0]) + "' command")
-					return
-				}
-				mu.Lock()
-				_, ok := items[string(cmd.Args[1])]
-				delete(items, string(cmd.Args[1]))
-				mu.Unlock()
-				if !ok {
-					conn.WriteInt(0)
-				} else {
-					conn.WriteInt(1)
-				}
+				return
 			}
+
+			// find the required command in our registry
+			fn := CMDLIST[todo]
+			if nil == fn {
+				conn.WriteError(fmt.Sprintf("unknown commands [%s]", todo))
+				return
+			}
+
+			// dispatch the command and catch its errors
+			fn(CmdContext{
+				Conn:   conn,
+				cmd: todo,
+				args:   args,
+				db:     db,
+			})
 		},
 		func(conn redcon.Conn) bool {
-			// use this function to accept or deny the connection.
-			// log.Printf("accept: %s", conn.RemoteAddr())
+			conn.SetContext(map[string]interface{}{})
 			return true
 		},
-		func(conn redcon.Conn, err error) {
-			// this is called when the connection has been closed
-			// log.Printf("closed: %s, err: %v", conn.RemoteAddr(), err)
-		},
+		nil,
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
 }
