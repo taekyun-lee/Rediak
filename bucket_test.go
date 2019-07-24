@@ -1,4 +1,4 @@
-package KangDB
+package main
 
 import (
 	"reflect"

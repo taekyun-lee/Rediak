@@ -1,4 +1,4 @@
-package KangDB
+package main
 
 const (
 	// For all and (string, bitmap) dataset

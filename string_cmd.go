@@ -1,6 +1,7 @@
-package KangDB
+package main
 
 import (
+	"fmt"
 	"strconv"
 	_"time"
 )
@@ -52,13 +53,13 @@ func string_set(c CmdContext) {
 
 func string_get(c CmdContext) {
 
-	if len(c.args) != 2{
+	if len(c.args) != 1{
 		c.WriteError("[CmdArgError]GET cmd has exact 2 elements (GET key )")
 		return
 	}
 	key := c.args[0]
 	v, err := c.db.Get(key)
-
+	fmt.Println(v)
 	if err != nil{
 		c.WriteError(err.Error())
 		return
@@ -81,12 +82,11 @@ func string_mset(c CmdContext) {
 		c.WriteError("[CmdArgError]MSET cmd has even argument (k1 v1 k2 v2...) (MSET key1 value1 [key valuen])")
 		return
 	}
-	kl := make([]string, int(lenargs/2))
-	vl := make([]interface{}, int(lenargs/2))
-
-	for i :=0;i<lenargs;i+=2{
-		kl[i] = c.args[i]
-		vl[i] = c.args[i+1]
+	var kl []string
+	var vl []interface{}
+	for i :=0;i<lenargs/2;i++{
+		kl = append(kl,c.args[i*2])
+		vl = append(vl,c.args[i*2+1])
 	}
 
 
@@ -193,8 +193,8 @@ func string_incr(c CmdContext){
 
 
 func string_ttl(c CmdContext) {
-	if len(c.args) != 2 {
-		c.WriteError("[CmdArgError]TTL cmd has exact 2 elements (GET key )")
+	if len(c.args) != 1 {
+		c.WriteError("[CmdArgError]TTL cmd has exact 1 elements (ttl key )")
 		return
 	}
 	key := c.args[0]

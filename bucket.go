@@ -1,4 +1,4 @@
-package KangDB
+package main
 
 import (
 	"fmt"
@@ -91,7 +91,7 @@ func New(isactive bool,interval time.Duration) DBInstance{
 	return db
 }
 
-func (db *DBInstance)GetShard(key string) *mapwithmutex{
+func (db *DBInstance)getShard(key string) *mapwithmutex{
 	return db.bucket[db.hf(key)%uint32(SHARDNUM)]
 }
 
@@ -99,9 +99,10 @@ func (db *DBInstance)GetShard(key string) *mapwithmutex{
 
 
 func (db *DBInstance)Get(key string) (Item, error){
-	shardmap := db.GetShard(key)
+	shardmap := db.getShard(key)
 	shardmap.RLock()
 	v, ok := shardmap.d[key]
+	fmt.Println("Internal key value ", key, v)
 	if !ok {
 		shardmap.RUnlock()
 		return Item{}, fmt.Errorf("KeyNotExists")
@@ -120,7 +121,7 @@ func (db *DBInstance)Get(key string) (Item, error){
 
 
 func (db *DBInstance)Set(key string, value interface{}, ttl int64) {
-	shardmap := db.GetShard(key)
+	shardmap := db.getShard(key)
 
 	d := Item{
 		v:value,
@@ -128,13 +129,14 @@ func (db *DBInstance)Set(key string, value interface{}, ttl int64) {
 	}
 	shardmap.Lock()
 	shardmap.d[key] = d
+	fmt.Println(" SET Internal key value ", key, d)
 
 	shardmap.Unlock()
 
 }
 
 func (db *DBInstance)Delete(key string) error{
-	shardmap := db.GetShard(key)
+	shardmap := db.getShard(key)
 	if _, ok := shardmap.d[key];!ok{
 		return fmt.Errorf("KeyItemNotExists")
 	}
@@ -146,7 +148,7 @@ func (db *DBInstance)Delete(key string) error{
 }
 
 func (db *DBInstance)IsExists(key string) bool{
-	shardmap := db.GetShard(key)
+	shardmap := db.getShard(key)
 
 	v, ok := shardmap.d[key]
 	if v.ttl > 0{
@@ -189,7 +191,7 @@ func (db *DBInstance)GC() {
 func (db *DBInstance)MGet(key []string) ([]Item, error){
 	ret := make([]Item,len(key))
 	for i,k :=range key{
-		shardmap := db.GetShard(k)
+		shardmap := db.getShard(k)
 		shardmap.RLock()
 		v, ok := shardmap.d[k]
 
@@ -218,7 +220,7 @@ func (db *DBInstance)MGet(key []string) ([]Item, error){
 
 func (db *DBInstance)MSet(key []string, value []interface{}, ttl int64) {
 	for i:=0;i<len(key);i++{
-		shardmap := db.GetShard(key[i])
+		shardmap := db.getShard(key[i])
 
 		d := Item{
 			v:value[i],
@@ -234,7 +236,7 @@ func (db *DBInstance)MSet(key []string, value []interface{}, ttl int64) {
 }
 
 func (db *DBInstance)AtomicIncr(key string, delta int64) (int64, error){
-	shardmap := db.GetShard(key)
+	shardmap := db.getShard(key)
 	v,ok := shardmap.d[key]
 	if !ok{
 		return 0, fmt.Errorf("Keynotexists")

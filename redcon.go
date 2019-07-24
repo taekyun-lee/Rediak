@@ -1,19 +1,20 @@
 // Copyright 2018 The Redix Authors. All rights reserved.
 // Use of this source code is governed by a Apache 2.0
 // license that can be found in the LICENSE file.
-package KangDB
+package main
 
 import (
 	"fmt"
-	"log"
 	"strings"
+	"time"
 
 	"github.com/tidwall/redcon"
 )
 
 func initRespServer() error {
+	db := New(false, time.Duration(10)*time.Second)
 	return redcon.ListenAndServe(
-		respaddr,
+		*respport,
 		func(conn redcon.Conn, cmd redcon.Command) {
 			// handles any panic
 			defer (func() {
@@ -36,12 +37,7 @@ func initRespServer() error {
 
 
 
-			// set the default db if there is no db selected
-			if ctx["db"] == nil || ctx["db"].(string) == "" {
-				ctx["db"] = "0"
-			}
-
-
+			ctx["db"] = db
 
 			// internal ping-pong
 			if todo == "ping" {
@@ -52,7 +48,11 @@ func initRespServer() error {
 			// close the connection
 			if todo == "quit" {
 				conn.WriteString("OK")
-				conn.Close()
+				err := conn.Close()
+				if err != nil{
+					conn.WriteError(fmt.Sprintf("close error [%s]", todo))
+					return
+				}
 				return
 			}
 
@@ -62,13 +62,13 @@ func initRespServer() error {
 				conn.WriteError(fmt.Sprintf("unknown commands [%s]", todo))
 				return
 			}
-
+			fmt.Println(todo ,args)
 			// dispatch the command and catch its errors
 			fn(CmdContext{
 				Conn:   conn,
 				cmd: todo,
 				args:   args,
-				db:     db,
+				db:     &db,
 			})
 		},
 		func(conn redcon.Conn) bool {
@@ -77,4 +77,18 @@ func initRespServer() error {
 		},
 		nil,
 	)
+}
+
+func main() {
+
+	err := make(chan error)
+
+	go (func() {
+		err <- initRespServer()
+	})()
+
+
+	if err := <-err; err != nil {
+		fmt.Println(err.Error())
+	}
 }
