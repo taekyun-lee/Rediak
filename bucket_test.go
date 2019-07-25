@@ -76,10 +76,7 @@ func TestDBInstance_Get(t *testing.T) {
 	pnew := New(false,1*time.Second)
 
 
-	//key1exp := Item{
-	//	v:"expired in 1 sec",
-	//	ttl:time.Now().Add(1*time.Second).UnixNano(),
-	//}
+
 	key5exp := Item{
 		v:"expired in 5 sec",
 		ttl:time.Now().Add(5*time.Second).UnixNano(),
@@ -93,7 +90,9 @@ func TestDBInstance_Get(t *testing.T) {
 	anew.Set("key1exp", "expired in 1 sec",time.Now().Add(1*time.Second).UnixNano())
 	anew.Set("key5exp", "expired in 5 sec",time.Now().Add(5*time.Second).UnixNano())
 	anew.Set("keynotexp", "not exp",0)
-	time.Sleep(5*time.Second)
+
+	time.Sleep(3*time.Second)
+
 
 	if _,ok:=anew.Get("key1exp");ok==nil{
 		t.Errorf("key1exp not expired w/ error ")

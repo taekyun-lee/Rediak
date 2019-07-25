@@ -14,7 +14,6 @@ type Serializer interface{
 }
 
 
-
 type GobSerializer struct{}
 
 func(g GobSerializer)Marshal(d interface{}) ([]byte, error){

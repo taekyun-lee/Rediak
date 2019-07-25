@@ -97,12 +97,10 @@ func (db *DBInstance)Get(key string) (Item, error){
 		return Item{}, fmt.Errorf("KeyNotExists")
 	}
 	v :=iv.(Item)
-	fmt.Println("Internal key value ", key, v)
-
 
 	// Passive eviction
 	if !db.IsActiveEviction && v.ttl >0 && v.ttl < time.Now().UnixNano(){
-
+		db.bucket.Delete(key)
 		return Item{}, fmt.Errorf("KeyItemExpired")
 
 	}
@@ -121,7 +119,6 @@ func (db *DBInstance)Set(key string, value interface{}, ttl int64) {
 	}
 
 	db.bucket.Store(key, d)
-	fmt.Println(" SET Internal key value ", key, d)
 
 
 }
@@ -155,34 +152,18 @@ func (db *DBInstance)IsExists(key string) bool{
 
 func activeEviction(db *DBInstance){
 	ticker := time.NewTicker(db.EvictionInterval)
-
+	db.mu.RLock()
+	defer db.mu.RUnlock()
 	for{
 		select{
 		case <-ticker.C:
-			//for _,shardmap := range db.bucket{
-			//
-			//	for k,v := range shardmap.d{
-			//		if v.ttl > 0 &&  v.ttl < time.Now().UnixNano(){
-			//			delete(shardmap.d, k)
-			//		}
-			//	}
-			//
-			//	shardmap.Unlock()
-			//
-			//
-			//
-			//}
 
 			db.bucket.Range(func(key,value interface{}) bool{
-
 						v := value.(Item)
 						if v.ttl > 0 &&  v.ttl < time.Now().UnixNano(){
 							db.bucket.Delete(key)
-							fmt.Println("asdfsadfsd")
-							return true
-
 						}
-						return false
+				return true
 			},
 			)
 			case <-db.activeeviction:
