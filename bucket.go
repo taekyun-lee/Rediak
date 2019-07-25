@@ -74,8 +74,7 @@ func New(isactive bool,interval time.Duration) DBInstance{
 	}
 
 	if db.IsActiveEviction{
-		db.EvictionInterval=interval
-		go activeEviction(&db)
+		db.EvictionInterval =interval
 
 	}
 
@@ -150,19 +149,19 @@ func (db *DBInstance)IsExists(key string) bool{
 	return ok
 }
 
-func activeEviction(db *DBInstance){
+func (db *DBInstance)activeEviction(){
 	ticker := time.NewTicker(db.EvictionInterval)
-	db.mu.RLock()
-	defer db.mu.RUnlock()
+
 	for{
 		select{
 		case <-ticker.C:
-
+			now := time.Now().UnixNano()
 			db.bucket.Range(func(key,value interface{}) bool{
 						v := value.(Item)
-						if v.ttl > 0 &&  v.ttl < time.Now().UnixNano(){
-							db.bucket.Delete(key)
-						}
+
+				if  v.ttl > 0 && v.ttl < now {
+					db.bucket.Delete(key)
+				}
 				return true
 			},
 			)

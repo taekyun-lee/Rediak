@@ -75,6 +75,8 @@ func TestDBInstance_Get(t *testing.T) {
 	anew := New(true, 1*time.Second)
 	pnew := New(false,1*time.Second)
 
+	go anew.activeEviction()
+
 
 
 	key5exp := Item{
@@ -94,8 +96,9 @@ func TestDBInstance_Get(t *testing.T) {
 	time.Sleep(3*time.Second)
 
 
-	if _,ok:=anew.Get("key1exp");ok==nil{
-		t.Errorf("key1exp not expired w/ error ")
+	if k,ok:=anew.Get("key1exp");ok==nil{
+		t.Log(k.ttl, time.Now().UnixNano(),k.ttl < time.Now().UnixNano())
+		t.Errorf("key1exp not expired w/ error")
 	}
 
 	if v,ok := anew.Get("key5exp"); ok!=nil || v.v!= key5exp.v {
