@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"runtime"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -15,15 +14,10 @@ const(
 )
 
 
-
-type shardmap []*mapwithmutex
-
-
-
-type mapwithmutex struct{
-	d map[string]Item
-	sync.RWMutex
-}
+//type mapwithmutex struct{
+//	d map[string]Item
+//	sync.RWMutex
+//}
 
 type Item struct{
 	v interface{}
@@ -33,7 +27,7 @@ type Item struct{
 type DBInstance struct{
 	mu sync.RWMutex
 
-	bucket shardmap
+	bucket sync.Map
 	shardNum int
 
 	//// TESTING
@@ -52,38 +46,27 @@ type DBInstance struct{
 	//SnapshotInterval time.Duration
 
 
-	// TODO:Consistent hashing config
-	hf Hashfunc
+
 
 }
 
-func newShardmap (shardNum int) shardmap{
-	m := make(shardmap,shardNum)
-	for i:=0;i<shardNum;i++{
-		m[i] = &mapwithmutex{
-			d:make(map[string]Item),
 
-		}
-	}
-	return m
-}
 
-func (db *DBInstance)LockAndReturnMutex(key string) (*sync.RWMutex, error){
-	db.mu.Lock()
-	defer db.mu.Unlock()
-	if db.IsExists(key){
-		shardmap := db.getShard(key)
-		shardmap.RWMutex.Lock()
-		return &shardmap.RWMutex, nil
-	}
-	return nil, fmt.Errorf("CannotAcquireMutexerror")
-}
+//func (db *DBInstance)LockAndReturnMutex(key string) (*sync.RWMutex, error){
+//	db.mu.Lock()
+//	defer db.mu.Unlock()
+//	if db.IsExists(key){
+//		shardmap := db.getShard(key)
+//		shardmap.RWMutex.Lock()
+//		return &shardmap.RWMutex, nil
+//	}
+//	return nil, fmt.Errorf("CannotAcquireMutexerror")
+//}
 
 func New(isactive bool,interval time.Duration) DBInstance{
 
 	db:= DBInstance{
-		bucket:newShardmap(SHARDNUM),
-		hf:crc32Hash,
+
 		// TODO: Lots of config files like eviction config
 		IsActiveEviction:isactive, // for config, default to passive(false)
 
@@ -100,69 +83,73 @@ func New(isactive bool,interval time.Duration) DBInstance{
 	return db
 }
 
-func (db *DBInstance)getShard(key string) *mapwithmutex{
-	return db.bucket[db.hf(key)%uint32(SHARDNUM)]
-}
+
 
 // GET-done, SET-done , DELETE-done, ISEXIST, CLOSE
 
 
 func (db *DBInstance)Get(key string) (Item, error){
-	shardmap := db.getShard(key)
-	shardmap.RLock()
-	v, ok := shardmap.d[key]
-	fmt.Println("Internal key value ", key, v)
+
+
+	iv, ok := db.bucket.Load(key)
 	if !ok {
-		shardmap.RUnlock()
+
 		return Item{}, fmt.Errorf("KeyNotExists")
 	}
+	v :=iv.(Item)
+	fmt.Println("Internal key value ", key, v)
+
 
 	// Passive eviction
 	if !db.IsActiveEviction && v.ttl >0 && v.ttl < time.Now().UnixNano(){
-		shardmap.RUnlock()
+
 		return Item{}, fmt.Errorf("KeyItemExpired")
 
 	}
-	shardmap.RUnlock()
+
 	return v, nil
 
 }
 
 
 func (db *DBInstance)Set(key string, value interface{}, ttl int64) {
-	shardmap := db.getShard(key)
+
 
 	d := Item{
 		v:value,
 		ttl:ttl,
 	}
-	shardmap.Lock()
-	shardmap.d[key] = d
+
+	db.bucket.Store(key, d)
 	fmt.Println(" SET Internal key value ", key, d)
 
-	shardmap.Unlock()
 
 }
 
 func (db *DBInstance)Delete(key string) error{
-	shardmap := db.getShard(key)
-	if _, ok := shardmap.d[key];!ok{
+
+	if _, ok := db.bucket.Load(key);!ok{
 		return fmt.Errorf("KeyItemNotExists")
 	}
 
-	shardmap.Lock()
-	delete(shardmap.d,key)
-	shardmap.Unlock()
+
+	db.bucket.Delete(key)
 	return nil
 }
 
 func (db *DBInstance)IsExists(key string) bool{
-	shardmap := db.getShard(key)
 
-	v, ok := shardmap.d[key]
-	if v.ttl > 0{
+
+	hv, ok := db.bucket.Load(key)
+	if !ok{
+		return ok
+	}
+	v := hv.(Item)
+	if (v.ttl > 0){
 		return ok && (v.ttl > time.Now().UnixNano())
 	}
+
+
 	return ok
 }
 
@@ -172,19 +159,32 @@ func activeEviction(db *DBInstance){
 	for{
 		select{
 		case <-ticker.C:
-			for _,shardmap := range db.bucket{
-				shardmap.Lock()
-				for k,v := range shardmap.d{
-					if v.ttl > 0 &&  v.ttl < time.Now().UnixNano(){
-						delete(shardmap.d, k)
-					}
-				}
+			//for _,shardmap := range db.bucket{
+			//
+			//	for k,v := range shardmap.d{
+			//		if v.ttl > 0 &&  v.ttl < time.Now().UnixNano(){
+			//			delete(shardmap.d, k)
+			//		}
+			//	}
+			//
+			//	shardmap.Unlock()
+			//
+			//
+			//
+			//}
 
-				shardmap.Unlock()
+			db.bucket.Range(func(key,value interface{}) bool{
 
+						v := value.(Item)
+						if v.ttl > 0 &&  v.ttl < time.Now().UnixNano(){
+							db.bucket.Delete(key)
+							fmt.Println("asdfsadfsd")
+							return true
 
-
-			}
+						}
+						return false
+			},
+			)
 			case <-db.activeeviction:
 				return
 		}
@@ -200,10 +200,9 @@ func (db *DBInstance)GC() {
 func (db *DBInstance)MGet(key []string) ([]Item, error){
 	ret := make([]Item,len(key))
 	for i,k :=range key{
-		shardmap := db.getShard(k)
-		shardmap.RLock()
-		v, ok := shardmap.d[k]
 
+		hv, ok := db.bucket.Load(k)
+		v := hv.(Item)
 		if !ok {
 			ret[i] = Item{}
 			//shardmap.RUnlock()
@@ -218,7 +217,6 @@ func (db *DBInstance)MGet(key []string) ([]Item, error){
 
 		}
 		ret[i] = v
-		shardmap.RUnlock()
 	}
 
 
@@ -229,29 +227,29 @@ func (db *DBInstance)MGet(key []string) ([]Item, error){
 
 func (db *DBInstance)MSet(key []string, value []interface{}, ttl int64) {
 	for i:=0;i<len(key);i++{
-		shardmap := db.getShard(key[i])
+
 
 		d := Item{
 			v:value[i],
 			ttl:ttl,
 		}
-		shardmap.Lock()
-		shardmap.d[key[i]] = d
-
-		shardmap.Unlock()
+		db.bucket.Store(key[i],d)
 
 	}
 
 }
 
 func (db *DBInstance)AtomicIncr(key string, delta int64) (int64, error){
-	shardmap := db.getShard(key)
-	v,ok := shardmap.d[key]
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	hv,ok := db.bucket.Load(key)
+	v := hv.(Item)
 	if !ok{
 		return 0, fmt.Errorf("Keynotexists")
 	}
-	if _, castok := v.v.(int64); castok {
-		atomic.AddInt64(v.v.(*int64),delta)
+	if val, castok := v.v.(int64); castok {
+		val +=1
+		v.v = val
 		return v.v.(int64), nil
 	}
 	return 0, fmt.Errorf("unexpectederror")
@@ -263,7 +261,7 @@ func (db *DBInstance)Close() {
 
 	db.mu.Lock()
 	db.activeeviction<- struct{}{}
-	db.bucket = shardmap{}
+	db.bucket = sync.Map{}
 	// TODO : Log db close
 	// TODO : Other db close func
 	db.mu.Unlock()

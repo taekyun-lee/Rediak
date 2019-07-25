@@ -68,8 +68,8 @@ var (
 		"hmset":   hashmap_hmset,
 		"hexists": hashmap_hexists,
 		"hincr":   hashmap_hincr,
-		"httl":    hashmap_httl,
-		"hlen":    hashmap_hlen,
+		//"httl":    hashmap_httl,
+		//"hlen":    hashmap_hlen,
 
 		//
 		//// lists

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"reflect"
 	"testing"
 	"time"
 )
@@ -10,51 +9,9 @@ const (
 	TESTSHARDNUM =32
 )
 
-func TestNew(t *testing.T) {
-	anew := New(true, 3*time.Second)
-	pnew := New(false,3*time.Second)
-
-	adb:= DBInstance{
-		bucket:newShardmap(TESTSHARDNUM),
-		hf:crc32Hash,
-		// TODO: Lots of config files like eviction config
-		IsActiveEviction:true, // for config, default to passive(false)
-
-	}
-
-	pdb:= DBInstance{
-		bucket:newShardmap(TESTSHARDNUM),
-		hf:crc32Hash,
-		// TODO: Lots of config files like eviction config
-		IsActiveEviction:false, // for config, default to passive(false)
-
-	}
-
-	if reflect.DeepEqual(anew, adb){
-		t.Errorf("Active DBinstance failed\n")
-	}
-
-	if reflect.DeepEqual(pnew, pdb){
-		t.Errorf("Active DBinstance failed\n")
-	}
-
-}
-
-func TestDBInstance_GetShard(t *testing.T) {
-	db := New(true, 3*time.Second)
-	ans := fnv32Hash("asdf")%uint32(TESTSHARDNUM)
-	emptyans := fnv32Hash("")%uint32(TESTSHARDNUM)
-
-	if reflect.DeepEqual(&db.bucket[ans] , db.GetShard("asdf") ){
-		t.Errorf("Getshard with string not equal\n test :  expected :\n",)
-	}
-
-	if reflect.DeepEqual(&db.bucket[emptyans] , db.GetShard("") ){
-		t.Errorf("Getshard with EMPTY string not equal\n test :  expected :\n")
-	}
 
 
-}
+
 
 func TestDBInstance_Set(t *testing.T) {
 	anew := New(true, 10*time.Second)
@@ -79,15 +36,15 @@ func TestDBInstance_Set(t *testing.T) {
 	anew.Set("key5exp", "expired in 5 sec",time.Now().Add(5*time.Second).UnixNano())
 	anew.Set("keynotexp", "not exp",0)
 
-	if anew.GetShard("key1exp").d["key1exp"].v != key1exp.v{
+	if hv,_:= anew.bucket.Load("key1exp");hv.(Item).v != key1exp.v{
 		t.Errorf("key1exp not equal")
 	}
 
-	if anew.GetShard("key5exp").d["key5exp"].v != key5exp.v{
+	if hv,_:= anew.bucket.Load("key5exp");hv.(Item).v != key5exp.v{
 		t.Errorf("key5exp not equal")
 	}
 
-	if anew.GetShard("keynotexp").d["keynotexp"].v != keynotexp.v{
+	if hv,_:= anew.bucket.Load("keynotexp");hv.(Item).v != keynotexp.v{
 		t.Errorf("keynotexp not equal")
 	}
 
@@ -96,15 +53,15 @@ func TestDBInstance_Set(t *testing.T) {
 	pnew.Set("key5exp", "expired in 5 sec",time.Now().Add(5*time.Second).UnixNano())
 	pnew.Set("keynotexp", "not exp",0)
 
-	if pnew.GetShard("key1exp").d["key1exp"].v != key1exp.v{
+	if hv,_:= pnew.bucket.Load("key1exp");hv.(Item).v != key1exp.v{
 		t.Errorf("key1exp not equal")
 	}
 
-	if pnew.GetShard("key5exp").d["key5exp"].v != key5exp.v{
+	if hv,_:= pnew.bucket.Load("key5exp");hv.(Item).v != key5exp.v{
 		t.Errorf("key5exp not equal")
 	}
 
-	if pnew.GetShard("keynotexp").d["keynotexp"].v != keynotexp.v{
+	if hv,_:= pnew.bucket.Load("keynotexp");hv.(Item).v != keynotexp.v{
 		t.Errorf("keynotexp not equal")
 	}
 
@@ -136,7 +93,7 @@ func TestDBInstance_Get(t *testing.T) {
 	anew.Set("key1exp", "expired in 1 sec",time.Now().Add(1*time.Second).UnixNano())
 	anew.Set("key5exp", "expired in 5 sec",time.Now().Add(5*time.Second).UnixNano())
 	anew.Set("keynotexp", "not exp",0)
-	time.Sleep(3*time.Second)
+	time.Sleep(5*time.Second)
 
 	if _,ok:=anew.Get("key1exp");ok==nil{
 		t.Errorf("key1exp not expired w/ error ")
