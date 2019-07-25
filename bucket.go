@@ -68,7 +68,16 @@ func newShardmap (shardNum int) shardmap{
 	return m
 }
 
-
+func (db *DBInstance)LockAndReturnMutex(key string) (*sync.RWMutex, error){
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	if db.IsExists(key){
+		shardmap := db.getShard(key)
+		shardmap.RWMutex.Lock()
+		return &shardmap.RWMutex, nil
+	}
+	return nil, fmt.Errorf("CannotAcquireMutexerror")
+}
 
 func New(isactive bool,interval time.Duration) DBInstance{
 
@@ -245,7 +254,7 @@ func (db *DBInstance)AtomicIncr(key string, delta int64) (int64, error){
 		atomic.AddInt64(v.v.(*int64),delta)
 		return v.v.(int64), nil
 	}
-	return 0, fmt.Errorf("Keynotexists")
+	return 0, fmt.Errorf("unexpectederror")
 
 }
 

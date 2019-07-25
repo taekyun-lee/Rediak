@@ -22,10 +22,6 @@ func initRespServer() error {
 					conn.WriteError(fmt.Sprintf("fatal error: %s", (err.(error)).Error()))
 				}
 			})()
-
-			// fetch the connection context
-			// normalize the todo action "command"
-			// normalize the command arguments
 			ctx := (conn.Context()).(map[string]interface{})
 			todo := strings.TrimSpace(strings.ToLower(string(cmd.Args[0])))
 			args := []string{}
@@ -33,9 +29,6 @@ func initRespServer() error {
 				v := strings.TrimSpace(string(v))
 				args = append(args, v)
 			}
-
-
-
 
 			ctx["db"] = db
 
@@ -72,10 +65,12 @@ func initRespServer() error {
 			})
 		},
 		func(conn redcon.Conn) bool {
-			conn.SetContext(map[string]interface{}{})
+			//conn.SetContext(map[string]interface{}{})
 			return true
 		},
-		nil,
+		func(conn redcon.Conn, err error)  {
+			//conn.SetContext(map[string]interface{}{})
+		},
 	)
 }
 

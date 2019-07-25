@@ -57,18 +57,17 @@ var (
 		"incr":   string_incr,
 		"ttl":    string_ttl,
 
-
-		//// hashes
-		//"hset":    hsetCommand,
-		//"hget":    hgetCommand,
-		//"hdel":    hdelCommand,
-		//"hgetall": hgetallCommand,
-		//"hkeys":   hkeysCommand,
-		//"hmset":   hmsetCommand,
-		//"hexists": hexistsCommand,
-		//"hincr":   hincrCommand,
-		//"httl":    httlCommand,
-		//"hlen":    hlenCommand,
+		// hashes
+		"hset":    hashmap_hset,
+		"hget":    hashmap_hget,
+		"hdel":    hashmap_hdel,
+		"hgetall": hashmap_hgetall,
+		"hkeys":   hashmap_hkeys,
+		"hmset":   hashmap_hmset,
+		"hexists": hashmap_hexists,
+		"hincr":   hashmap_hincr,
+		"httl":    hashmap_httl,
+		"hlen":    hashmap_hlen,
 
 		//
 		//// lists
