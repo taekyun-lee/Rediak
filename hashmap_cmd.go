@@ -10,9 +10,6 @@ import (
 )
 
 //
-// hmsetCommand - HMSET <HASHMAP> <key1> <val1> [<key2> <val2> ...]
-// hexistsCommand - HEXISTS <HASHMAP> [<key>]
-// hlencommand - HLEN hashmap
 // hincrCommand - HINCR <hash> <key> [<number>]
 // httlCommand - HTTL <HASH> <KEY>
 //
@@ -160,19 +157,86 @@ func hashmap_hkeys(c CmdContext) {
 	}
 
 }
+// hmsetCommand - HMSET <HASHMAP> <key1> <val1> [<key2> <val2> ...]
 
 func hashmap_hmset(c CmdContext) {
+	lenargs := len(c.args)
+	if lenargs <3   {
+		c.WriteError("[CmdArgError]HMSET cmd has at least 3 arguments (HMSET hkey k1 v1 k2 v2...) ")
+		return
+	}
+	hk := c.args[0]
+	hmsetargs := c.args[1:]
+	if len(hmsetargs) %2 != 0 {
+		c.WriteError("[CmdArgError]HMSET cmd has even arguments (HMSET hkey k1 v1 k2 v2...)")
+		return
+	}
 
+	newhm := make(map[string]string)
+	for i :=0;i<len(hmsetargs)/2;i++{
+		newhm[hmsetargs[i*2]] = hmsetargs[i*2+1]
+	}
+
+
+	c.db.Set(hk,newhm, DEFAULTTTLVALUE)
+	c.WriteString("OK")
 }
+
+// hexistsCommand - HEXISTS <HASHMAP> [<key>]
+
 func hashmap_hexists(c CmdContext) {
+	lenargs := len(c.args)
+
+	if lenargs != 2{
+		c.WriteError("[CmdArgError]HEXIST cmd exact 2 elements (HEXISTS hkey key )")
+		return
+	}
+
+	v, ok:= c.db.Get(c.args[0])
+	if ok != nil{
+		c.WriteString("0")
+		return
+	}else{
+		hv,cok :=v.v.(map[string]string)
+		if !cok{
+			c.WriteString("0")
+			return
+		}
+		_,isexist := hv[c.args[1]]
+		if isexist {
+			c.WriteString("1")
+			return
+		}
+
+	}
+	c.WriteString("0")
+	return
 
 }
-func hashmap_hincr(c CmdContext) {
+
+// hlencommand - HLEN hashmap
+
+func hashmap_hlen(c CmdContext) {
+
+
+	if len(c.args) != 1{
+		c.WriteError("[CmdArgError]HLEN cmd exact 1 elements (HLEN hkey key )")
+		return
+	}
+
+	v,ok := c.db.Get(c.args[0])
+	if ok !=nil{
+		c.WriteInt(0)
+		return
+	}
+	d,conok := v.v.(map[string]string)
+	if conok{
+		c.WriteInt(0)
+		return
+	}else{
+		c.WriteInt(len(d))
+		return
+	}
 
 }
-//func hashmap_httl(c CmdContext) {
-//
-//}
-//func hashmap_hlen(c CmdContext) {
-//
-//}
+// hincrCommand - HINCR <hash> <key> [<number>]

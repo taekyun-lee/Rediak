@@ -10,7 +10,7 @@
     - entry에 TTL 지원 (medium) -> yes,with active ttl/ passive ttl eviction algorithm
     - primitive key-value entry에 대해 concurrent operation 지원 (test and set) (medium) -> yes
     - persistent 지원 (medium)
-    - multithreaded 모델로 변경 시도 (redis는 싱글 스레드), 같은 키에 대해서는 serializability 지원 (medium~hard)
+    - multithreaded 모델로 변경 시도 (redis는 싱글 스레드) ->yes , 같은 키에 대해서는 serializability 지원 (medium~hard)
     - distributed로 확장, fail-over 고려 (hard)
 
 - [심사 기준] 
