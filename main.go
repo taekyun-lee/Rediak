@@ -3,12 +3,28 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/sirupsen/logrus"
+	"runtime"
 )
 
-func main() {
+func init(){
 	flag.Parse()
-	err := make(chan error)
+	runtime.GOMAXPROCS(*numCore)
 
+	logger.SetLevel(logrus.DebugLevel)
+
+
+
+	// TODO : SWIM and consistent hashing
+	//modifydb := new(sync.Map)
+
+
+}
+
+func main() {
+
+	err := make(chan error)
+	fmt.Println(rediaklogo)
 	go (func() {
 		err <- initRespServer()
 	})()

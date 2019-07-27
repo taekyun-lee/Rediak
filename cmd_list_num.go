@@ -27,7 +27,7 @@ func (b *Bucket) SET(c RESPContext){
 		defer b.Unlock()
 	}
 	lenargs := len(c.args)
-	var ttl time.Duration
+	var ttl int64
 	if lenargs <2 {
 		c.WriteError(fmt.Sprintf("%s SET/SETEX has at least 2 arguments SET/SETEX  key value [ttl in milisecond]",ErrArgsLen))
 		return
@@ -35,13 +35,13 @@ func (b *Bucket) SET(c RESPContext){
 
 	k,v := c.args[0], c.args[1]
 
-	if lenargs > 2 {
+	if lenargs >2 {
 		t, ok := strconv.Atoi(c.args[2])
 		if ok != nil {
 			c.WriteError(fmt.Sprintf("%s ttl is positive integer [ttl in milisecond]",ErrArgsLen))
 			return
 		}else{
-			ttl = time.Duration(t) * time.Millisecond
+			ttl = time.Now().Add(time.Duration(t) * time.Millisecond).UnixNano()
 		}
 
 	}else{
@@ -50,7 +50,7 @@ func (b *Bucket) SET(c RESPContext){
 
 	b.Store(k,&Data{
 		D:       v,
-		TTL:     time.Now().Add(ttl).UnixNano(),
+		TTL:     ttl,
 		dtype:   0,
 		expired: false,
 	})
@@ -67,6 +67,7 @@ func (b *Bucket) SET(c RESPContext){
 func (b *Bucket) GET (c RESPContext){
 	lenargs := len(c.args)
 	if lenargs != 1 {
+
 		c.WriteError(fmt.Sprintf("%s GET has exact 1 arguments GET key ",ErrArgsLen))
 		return
 	}
@@ -75,17 +76,20 @@ func (b *Bucket) GET (c RESPContext){
 
 	v, ok := b.Load(k)
 	if !ok {
-		//c.WriteError(fmt.Sprintf("%s key  %s not exists ",ErrNotExists,k))
+		c.WriteError(fmt.Sprintf("%s key  %s not exists ",ErrNotExists,k))
 		// Not exists
-		c.WriteNull()
+		//c.WriteNull()
 		return
 	}
 	dv := v.(*Data)
-	if *evictionInterval == 0 && dv.TTL < time.Now().UnixNano(){
+	if *evictionInterval == 0 && dv.TTL != 0  && dv.TTL < time.Now().UnixNano(){
 		//passive key eviction
+
+		c.WriteError(fmt.Sprintf("%s key  %s  expired ",ErrExpired,k))
+
 		b.Delete(k)
 		// key expired error -> not exists
-		c.WriteNull()
+		//c.WriteNull()
 		return
 	}
 	c.WriteString(dv.D.(string))
@@ -111,11 +115,12 @@ func (b *Bucket) DELETE (c RESPContext){
 	}
 
 	for i:=0;i<lenargs;i++{
-		_,deleted = b.LoadOrStore(c.args[i],nil)
+		_,deleted = b.Load(c.args[i])
 		if deleted{
+			b.Delete(c.args[i])
 			delval+=1
 		}
-		// b.Delete(c.args[i]) if memory exists
+
 	}
 	atomic.AddInt32(&b.changedNum,1)
 	if b.modifyCallback != nil{
@@ -165,7 +170,7 @@ func (b *Bucket) INCR (c RESPContext){
 
 	k := c.args[0]
 	if lenargs == 2 {
-		t, ok := strconv.Atoi(c.args[2])
+		t, ok := strconv.Atoi(c.args[1])
 		if ok != nil {
 			c.WriteError(fmt.Sprintf("%s increment is numeric value ",ErrArgsLen))
 			return
@@ -179,23 +184,35 @@ func (b *Bucket) INCR (c RESPContext){
 		return
 	}
 	dv := v.(*Data)
-	if *evictionInterval == 0 && dv.TTL < time.Now().UnixNano(){
+	if *evictionInterval == 0 && dv.TTL != 0  && dv.TTL < time.Now().UnixNano(){
 		//passive key eviction
 		b.Delete(k)
 		c.WriteError(fmt.Sprintf("%s key expired ",ErrExpired))
 		return
 
 	}
+	orig,castok :=strconv.ParseInt(dv.D.(string), 10,64)
 
-	atomic.AddInt64(dv.D.(*int64),incrby)
+	if castok != nil{
+		c.WriteError(fmt.Sprintf("key has no numerical value "))
+		return
+	}
 
+	newd := orig+incrby
+	newds := strconv.FormatInt(newd,10)
+	b.Store(k, &Data{
+		D:       newds,
+		TTL:     dv.TTL,
+		dtype:   0,
+		expired: false,
+	})
 	atomic.AddInt32(&b.changedNum,1)
 	if b.modifyCallback != nil{
 		b.modifyCallback(c)
 	}
 
 
-	c.WriteInt(int(dv.D.(int64) + incrby))
+	c.WriteInt(int(newd))
 	return
 }
 

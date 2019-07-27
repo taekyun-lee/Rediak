@@ -36,10 +36,4 @@ type RESPContext struct {
 	args []string
 }
 
-var (
-	ErrArgsLen     = "(Error with arguments lengths)"
-	ErrInvalidArgs = "(Error with invalid argument)"
-	ErrNotExists = "(Error Not exists)"
-	ErrExpired = "(Error key expired)"
-
-)
+//type rediakfunc func(Bucket, RESPContext)

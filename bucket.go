@@ -69,7 +69,7 @@ func (b *Bucket)activeEviction(){
 
 }
 
-func (b *Bucket)GC(c RESPContext) {
+func (b *Bucket) GCExec(c RESPContext) {
 	// USE WITH CAUTION, IT BLOCKS ENTIRE DB!!!!!
 	c.WriteString("GC starts. IT BLOCKS ENTIRE DB!!!!!  ")
 	runtime.GC()

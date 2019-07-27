@@ -2,20 +2,83 @@ package main
 
 import (
 	"flag"
-	"time"
+	"github.com/sirupsen/logrus"
+	"runtime"
 )
 
 var (
 
 	respaddr = flag.String("rediak-addr","127.0.0.1","the address of rediak server")
-	respport = flag.String("rediak-addr", ":6380", "the port of rediak server")
-	evictionInterval = flag.Duration("evict-time",10*time.Second,"Default interval of eviction, 0 means no active eviction")
-	defaultTTL = flag.Duration("evict-time",0,"Default TTL, 0 means never expired")
-	Stronglock = flag.Bool("Strong-lock",true, "use mutex to all modification command,  ")
+	respport = flag.String("rediak-port", ":6380", "the port of rediak server")
+	evictionInterval = flag.Duration("evict-interval",0,"Default interval of eviction, 0 means no active eviction")
+	Stronglock = flag.Bool("Strong-lock",false, "use mutex to all modification command,  ")
+	numCore = flag.Int("num-core", runtime.NumCPU(),"number of cores using this instances")
+	storageDir = flag.String("storage-dir","./","Default persistent storage location")
+	// TODO:consistent ring and SWIM Protocol
+	//peeraddr = flag.String("peer", "", "peer to connect ring")
 
 	// INTERNAL USAGE, TODO: RUNTIME CHANGE WHEN NEEDED
 	DEFAULTHASHSIZE = 32
 	DEFAULTSTRINGSIZE = 32
+
+
+)
+
+
+var (
+	rediak_cmds = map[string]func(*Bucket,RESPContext){
+
+		// string, numerical value
+		"get":      (*Bucket).GET,
+		"set":     (*Bucket).SET,
+		"setex":   (*Bucket).SET,
+		"del":     (*Bucket).DELETE,
+		"exists":  (*Bucket).EXISTS,
+		"incr":    (*Bucket).INCR,
+		"incrby":  (*Bucket).INCR,
+
+		// list
+
+
+		// hashmap
+
+
+		// set
+
+		// sortedset
+
+		// util
+		"gc" :  (*Bucket).GCExec,
+
+
+
+	}
+)
+
+var (
+	ErrArgsLen     = "(Error with arguments lengths)"
+	ErrInvalidArgs = "(Error with invalid argument)"
+	ErrNotExists = "(Error Not exists)"
+	ErrExpired = "(Error key expired)"
+
+)
+
+var logger logrus.Logger
+
+const (
+	versionNum = 0.1
+	introstring = "Rediak  started"
+	rediaklogo=`
+
+#####  ###### #####  #   ##   #    # 
+#    # #      #    # #  #  #  #   #  
+#    # #####  #    # # #    # ####   
+#####  #      #    # # ###### #  #   
+#   #  #      #    # # #    # #   #  
+#    # ###### #####  # #    # #    # 
+                                     
+`
+
 
 )
 
