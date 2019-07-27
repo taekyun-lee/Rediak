@@ -1,88 +1,33 @@
-// Copyright 2018 The Redix Authors. All rights reserved.
-// Use of this source code is governed by a Apache 2.0
-// license that can be found in the LICENSE file.
-// Modify by Taekyun Lee 2019
 package main
 
-import "github.com/tidwall/redcon"
-
-type CmdInterface func(c CmdContext)
-
-type CmdContext struct {
-	redcon.Conn
-	db     KVinterface
-	cmd    string
-	args   []string
-	retval interface{}
-}
-
-type KVinterface interface {
-	Get(key string) (Item, error)
-	Set(key string, value interface{}, ttl int64)
-	MGet(key []string) ([]Item, error)
-	MSet(key []string, value []interface{}, ttl int64)
-	AtomicIncr(key string, delta int64) (int64, error)
-	Delete(key string) error
-	IsExists(key string) bool
-	GC()
-	Close()
-
-	/*
-
-
-		getShard(key string) *mapwithmutex
-		Get(key string) (Item, error)
-		Set(key string, value interface{}, ttl int64)
-		MGet(key []string) ([]Item, error)
-		MSet(key []string, value []interface{}, ttl int64)
-		AtomicIncr(key string, delta int64) (int64, error)
-		Delete(key string) error
-		IsExists(key string) bool
-		GC()
-		Close()
-
-	*/
-
-}
+type rediakfunc func(Bucket, RESPContext)
 
 var (
-	CMDLIST = map[string]CmdInterface{
+	rediak_cmds = map[string]rediakfunc{
+
+		// string, numerical value
+		"get":    Bucket.GET,
+		"set":    Bucket.SET,
+		"setex":  Bucket.GET,
+		"del":    Bucket.DELETE,
+		"exists": Bucket.EXISTS,
+		"incr":   Bucket.INCR,
+		"incrby": Bucket.INCR,
+
+		// list
 
 
-		//// strings
-		"set":    string_set,
-		"mset":   string_mset,
-		"get":    string_get,
-		"mget":   string_mget,
-		"del":    string_del,
-		"exists": string_exists,
-		"incr":   string_incr,
-		"ttl":    string_ttl,
+		// hashmap
 
-		// hashes
-		"hset":    hashmap_hset,
-		"hget":    hashmap_hget,
-		"hdel":    hashmap_hdel,
-		"hgetall": hashmap_hgetall,
-		"hkeys":   hashmap_hkeys,
-		"hmset":   hashmap_hmset,
-		"hexists": hashmap_hexists,
-		"hlen":    hashmap_hlen,
-		//"hincr":   hashmap_hincr,
-		//"httl":    hashmap_httl,
 
-		//// lists
-		//"lpush":      lpushCommand,
-		//"lpop": lpopCommand,
-		//"lrem":       lremCommand,
-		//"lrange":     lrangeCommand,
-		//"lcount":     lcountCommand,
+		// set
 
-		//// utils
-		//"gc":       gcCommand,
-		//"info":     infoCommand,
-		//"echo":     echoCommand,
-		//"flushdb":  flushdbCommand,
-		//"flushall": flushallCommand,
+		// sortedset
+
+		// util
+		"gc" : Bucket.GC,
+
+
+
 	}
 )

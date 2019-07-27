@@ -79,15 +79,3 @@ func initRespServer() error {
 	)
 }
 
-func main() {
-	err := make(chan error)
-
-	go (func() {
-		err <- initRespServer()
-	})()
-
-
-	if err := <-err; err != nil {
-		fmt.Println(err.Error())
-	}
-}

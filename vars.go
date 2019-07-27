@@ -1,14 +1,21 @@
 package main
 
-import "flag"
+import (
+	"flag"
+	"time"
+)
 
 var (
 
-	respaddr = "localhost"
-	respport = flag.String("resp-addr", ":6380", "the address of resp server")
+	respaddr = flag.String("rediak-addr","127.0.0.1","the address of rediak server")
+	respport = flag.String("rediak-addr", ":6380", "the port of rediak server")
+	evictionInterval = flag.Duration("evict-time",10*time.Second,"Default interval of eviction, 0 means no active eviction")
+	defaultTTL = flag.Duration("evict-time",0,"Default TTL, 0 means never expired")
+	Stronglock = flag.Bool("Strong-lock",true, "use mutex to all modification command,  ")
 
+	// INTERNAL USAGE, TODO: RUNTIME CHANGE WHEN NEEDED
 	DEFAULTHASHSIZE = 32
-	DEFAULTTTLVALUE = int64(0) // Set TTL to infinite if not specified
+	DEFAULTSTRINGSIZE = 32
 
 )
 
