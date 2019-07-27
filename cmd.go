@@ -48,7 +48,7 @@ type KVinterface interface {
 var (
 	CMDLIST = map[string]CmdInterface{
 
-		//
+
 		//// strings
 		"set":    string_set,
 		"mset":   string_mset,
@@ -71,19 +71,13 @@ var (
 		//"hincr":   hashmap_hincr,
 		//"httl":    hashmap_httl,
 
-		//
 		//// lists
 		//"lpush":      lpushCommand,
-		//"lpushu":     lpushuCommand,
-		//"lrange":     lrangeCommand,
+		//"lpop": lpopCommand,
 		//"lrem":       lremCommand,
+		//"lrange":     lrangeCommand,
 		//"lcount":     lcountCommand,
-		//"lcard":      lcountCommand,
-		//"lsrch":      lsearchCommand,
-		//"lsrchcount": lsearchcountCommand,
-		//
 
-		//
 		//// utils
 		//"gc":       gcCommand,
 		//"info":     infoCommand,

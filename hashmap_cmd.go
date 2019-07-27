@@ -6,6 +6,7 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 )
 
@@ -34,13 +35,14 @@ func hashmap_hset(c CmdContext) {
 	var err error
 	lenargs := len(c.args)
 	if lenargs <3 {
-		c.WriteError("[CmdArgError]HSET cmd has at least 3 arguments (HSET hkey k v [ttl] ) ")
+		c.WriteError("[CmdArgError]HSET cmd has at least 2 arguments (HSET hkey k v [ttl] ) ")
 		return
 	}
 	hk, k, v := c.args[0],c.args[1],c.args[2]
 	if lenargs >3 {
 		ttl,err = strconv.Atoi(c.args[3])
 		if err != nil{
+			c.WriteError("asdfdsafsdfsadf")
 			c.WriteError(err.Error())
 			return
 		}
@@ -60,13 +62,17 @@ func hashmap_hset(c CmdContext) {
 func hashmap_hget(c CmdContext) {
 
 	lenargs := len(c.args)
-	if lenargs <3 {
-		c.WriteError("[CmdArgError]HSET cmd has exast  2 arguments (HGET hkey k  ) ")
+	fmt.Println(lenargs)
+
+	if lenargs !=2 {
+		c.WriteError("[CmdArgError]HGET cmd has exact  2 arguments (HGET hkey k  ) ")
 		return
 	}
 
 	hv, err := c.db.Get(c.args[0])
 	if err != nil{
+		c.WriteError("dadadadada")
+
 		c.WriteError(err.Error())
 		return
 	}

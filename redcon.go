@@ -68,13 +68,13 @@ func initRespServer() error {
 		func(conn redcon.Conn) bool {
 			//accept or denied
 			// use for auth
-			//conn.SetContext(map[string]interface{}{})
+			conn.SetContext(map[string]interface{}{})
 			return true
 		},
 		func(conn redcon.Conn, err error)  {
 			//close
 			// use for closing db
-			//conn.SetContext(map[string]interface{}{})
+			conn.SetContext(map[string]interface{}{})
 		},
 	)
 }
