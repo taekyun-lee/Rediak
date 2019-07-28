@@ -47,7 +47,7 @@ func NewBucket() Bucket{
 }
 
 func (b *Bucket)activeEviction(){
-	ticker := time.NewTicker(*evictionInterval)
+	ticker := time.NewTicker(time.Duration(*evictionInterval) * time.Second)
 
 	for{
 		select{

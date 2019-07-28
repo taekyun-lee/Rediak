@@ -11,10 +11,10 @@ import (
 	"github.com/tidwall/redcon"
 )
 
-func initRespServer() error {
-	db := NewBucket()
+func initRespServer(db *Bucket) error {
+
 	return redcon.ListenAndServe(
-		*respport,
+		fmt.Sprintf(":%d",*respport),
 		func(conn redcon.Conn, cmd redcon.Command) {
 			// handles any panic
 
@@ -61,7 +61,7 @@ func initRespServer() error {
 				return
 			}
 			// dispatch the command and catch its errors
-			fn(&db, RESPContext{
+			fn(db, RESPContext{
 				Conn: conn,
 				cmd:  todo,
 				args: args,

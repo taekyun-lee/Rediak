@@ -36,4 +36,15 @@ type RESPContext struct {
 	args []string
 }
 
+// TODO : for testing speed
+//type liste struct{
+//	value string
+//	prev *liste
+//	next *liste
+//}
+//
+//type listd struct{
+//	len int
+//	First *liste
+//}
 //type rediakfunc func(Bucket, RESPContext)

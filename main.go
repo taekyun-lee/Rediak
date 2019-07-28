@@ -14,7 +14,6 @@ func init(){
 	logger.SetLevel(logrus.DebugLevel)
 
 
-
 	// TODO : SWIM and consistent hashing
 	//modifydb := new(sync.Map)
 
@@ -23,14 +22,28 @@ func init(){
 
 func main() {
 
+	db := NewBucket()
+
 	err := make(chan error)
+	// TODO : consistent hashring
+	//hashring := make(chan struct{})
+	//torediak := make(chan struct{})
+
 	fmt.Println(rediaklogo)
 	go (func() {
-		err <- initRespServer()
+		err <- initRespServer(&db)
 	})()
 
+	go(func() {
+		// TODO : rdb snapshot implementation
+	})()
+
+	go(func() {
+		// TODO : consistent hashring
+	})()
 
 	if err := <-err; err != nil {
+		logger.Println(err.Error())
 		fmt.Println(err.Error())
 	}
 }

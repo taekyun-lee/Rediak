@@ -9,11 +9,14 @@ import (
 var (
 
 	respaddr = flag.String("rediak-addr","127.0.0.1","the address of rediak server")
-	respport = flag.String("rediak-port", ":6380", "the port of rediak server")
-	evictionInterval = flag.Duration("evict-interval",0,"Default interval of eviction, 0 means no active eviction")
+	respport = flag.Int("rediak-port", 6380, "the port of rediak server")
+	evictionInterval = flag.Int("evict-interval",0,"Default interval of eviction, 0 means no active eviction")
 	Stronglock = flag.Bool("Strong-lock",false, "use mutex to all modification command,  ")
 	numCore = flag.Int("num-core", runtime.NumCPU(),"number of cores using this instances")
 	storageDir = flag.String("storage-dir","./","Default persistent storage location")
+	snapshotInterval = flag.Int("snapshot-interval",0,"Default interval of eviction, 0 means no active eviction")
+
+
 	// TODO:consistent ring and SWIM Protocol
 	//peeraddr = flag.String("peer", "", "peer to connect ring")
 
@@ -42,6 +45,10 @@ var (
 
 		// hashmap
 
+		"hget":  (*Bucket).HGET,
+		"hset": (*Bucket).HSET,
+		"hdel": (*Bucket).HDELETE,
+		"hexists":(*Bucket).HEXISTS,
 
 		// set
 
