@@ -13,8 +13,10 @@ var (
 	evictionInterval = flag.Int("evict-interval",0,"Default interval of eviction, 0 means no active eviction")
 	Stronglock = flag.Bool("Strong-lock",false, "use mutex to all modification command,  ")
 	numCore = flag.Int("num-core", runtime.NumCPU(),"number of cores using this instances")
-	storageDir = flag.String("storage-dir","./","Default persistent storage location")
-	snapshotInterval = flag.Int("snapshot-interval",0,"Default interval of eviction, 0 means no active eviction")
+	restoreSnapshot = flag.String("restore-snapshot","","if restore needed, write absolute path of files( like /path/of/folder/file.rdb ) ")
+	storageDir = flag.String("storage-dir","./","Default persistent storage location /path/to/snapshotfolder")
+	snapshotInterval = flag.Int("snapshot-interval",10,"Default time interval of take snapshot, 0 means no active snapshot")
+	snapshotmodifyInterval = flag.Int("snapshot-modify-interval",1,"Default time interval of take snapshot, 0 means no active eviction")
 
 
 	// TODO:consistent ring and SWIM Protocol
@@ -41,6 +43,13 @@ var (
 		"incrby":  (*Bucket).INCR,
 
 		// list
+		"lpush": (*Bucket).LPUSH,
+		"lpop": (*Bucket).LPOP,
+		"lindex": (*Bucket).LINDEX,
+		"llen": (*Bucket).LLEN,
+		"lrange": (*Bucket).LRANGE,
+		"lrem": (*Bucket).LREM,
+		"linsert": (*Bucket).LINSERT,
 
 
 		// hashmap
