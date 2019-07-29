@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
 	"os"
 	"runtime"
@@ -37,6 +38,20 @@ func main() {
 
 	err := make(chan error)
 
+	// TODO : consistent hashring
+	go (func() {
+		redisdb := redis.NewRing(&redis.RingOptions{
+			Addrs: map[string]string{
+				"shard1": ":7000",
+				"shard2": ":7001",
+				"shard3": ":7002",
+			},
+		})
+	})()
+
+
+
+
 	fmt.Println(rediaklogo)
 	go (func() {
 		err <- initRespServer(&db)
@@ -68,15 +83,10 @@ func main() {
 		})()
 	}
 
-	// TODO : consistent hashring
-	//hashring := make(chan struct{})
-	//torediak := make(chan struct{})
-	//go (func() {
-	//
-	//})()
+
+
+
 	// periodically write info
-
-
 	go func(){
 		t := time.NewTicker(time.Second*time.Duration(100))
 		for{
@@ -90,7 +100,6 @@ func main() {
 			logger.Printf("\tTotalAlloc = %v MiB\n", bToMb(m.TotalAlloc))
 			logger.Printf("\tSys = %v MiB\n", bToMb(m.Sys))
 			logger.Printf("\tNumGC = %v\n", m.NumGC)
-
 
 
 		}}

@@ -20,8 +20,8 @@ func (b *Bucket) LPUSH(c RESPContext){
 		return
 	}
 	k := c.args[0]
-	s := make([]string,DEFAULTHASHSIZE )
-	for i:=lenargs-1;i>1;i--{
+	s := make([]string,0)
+	for i:=lenargs-1;i>0;i--{
 		s = append(s,c.args[i])
 	}
 
@@ -44,7 +44,7 @@ func (b *Bucket) LPUSH(c RESPContext){
 		c.WriteError("not list type")
 		return
 	}else{
-		c.WriteError("not exists")
+		c.WriteInt(len(s))
 		return
 	}
 
@@ -70,9 +70,12 @@ func (b *Bucket) LPOP(c RESPContext){
 			if len(v.(*Data).D.([]string)) >1{
 
 				x, v.(*Data).D = v.(*Data).D.([]string)[0],v.(*Data).D.([]string)[1:]
-			}else{
+			}else if len(v.(*Data).D.([]string)) ==1 {
 				x , v.(*Data).D = v.(*Data).D.([]string)[0],[]string{}
 
+			}else{
+				c.WriteNull()
+				return
 			}
 
 			atomic.AddInt32(&b.changedNum,1)

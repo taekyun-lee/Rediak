@@ -17,7 +17,6 @@ func initRespServer(db *Bucket) error {
 		fmt.Sprintf(":%d",*respport),
 		func(conn redcon.Conn, cmd redcon.Command) {
 			// handles any panic
-
 			if *evictionInterval != 0{
 				go db.activeEviction()
 			}
@@ -35,7 +34,6 @@ func initRespServer(db *Bucket) error {
 				v := strings.TrimSpace(string(v))
 				args = append(args, v)
 			}
-
 
 			// internal ping-pong
 			if todo == "ping" {
