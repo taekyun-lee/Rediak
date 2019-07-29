@@ -48,9 +48,7 @@ var (
 		"lindex": (*Bucket).LINDEX,
 		"llen": (*Bucket).LLEN,
 		"lrange": (*Bucket).LRANGE,
-		"lrem": (*Bucket).LREM,
-		"linsert": (*Bucket).LINSERT,
-
+		//"lrem": (*Bucket).LREM,
 
 		// hashmap
 
@@ -79,7 +77,8 @@ var (
 
 )
 
-var logger logrus.Logger
+var baselogger *logrus.Logger
+var logger *logrus.Entry
 
 const (
 	versionNum = 0.1

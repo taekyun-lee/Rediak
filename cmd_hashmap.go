@@ -56,7 +56,7 @@ func (b *Bucket) HSET(c RESPContext){
 	})
 
 
-	if loaded && already.(*Data).dtype==1  { // already has hashmap
+	if loaded && already.(*Data).dtype==21  { // already has hashmap
 		newv := already.(*Data)
 		newv.D.(map[string]string)[k] = v
 
@@ -78,7 +78,7 @@ func (b *Bucket) HSET(c RESPContext){
 		b.Store(hk, &Data{
 			D:       v,
 			TTL:     ttl,
-			dtype:   1,
+			dtype:   21,
 			expired: false,
 		})
 
@@ -108,7 +108,7 @@ func (b *Bucket) HGET (c RESPContext){
 
 		return
 	}
-	if  v.(*Data).dtype != 1{
+	if  v.(*Data).dtype != 21{
 		c.WriteNull()
 		return
 	}
@@ -156,7 +156,7 @@ func (b *Bucket) HDELETE (c RESPContext){
 
 		return
 	}
-	if  v.(*Data).dtype != 1{
+	if  v.(*Data).dtype != 21{
 		c.WriteNull()
 		return
 	}
@@ -197,7 +197,7 @@ func (b *Bucket) HEXISTS (c RESPContext){
 		c.WriteInt(0)
 		return
 	}
-	if  v.(*Data).dtype != 1{
+	if  v.(*Data).dtype != 21{
 		//c.WriteNull()
 		c.WriteInt(0)
 		return
