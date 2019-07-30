@@ -52,10 +52,10 @@ func (b *Bucket)activeEviction(){
 	for{
 		select{
 		case <-ticker.C:
-			now := time.Now().UnixNano()
+
 			b.Range(func(key,value interface{}) bool{
 				v := value.(*Data)
-
+				now := time.Now().UnixNano()
 				if  v.TTL > 0 && v.TTL < now {
 					b.Delete(key)
 				}

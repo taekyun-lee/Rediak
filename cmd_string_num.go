@@ -22,7 +22,7 @@ KEYS [<regexp-pattern>]
 
 */
 
-//SET <key> <value> [<TTL "millisecond">] .
+//SET key value [expiration EX seconds|PX milliseconds]
 //SETEX key seconds value
 func (b *Bucket) SET(c RESPContext){
 	// stronglock enabled
@@ -40,13 +40,36 @@ func (b *Bucket) SET(c RESPContext){
 	k,v := c.args[0], c.args[1]
 
 	if lenargs >2 {
-		t, ok := strconv.Atoi(c.args[2])
-		if ok != nil {
-			c.WriteError(fmt.Sprintf("%s ttl is positive integer [ttl in milisecond]",ErrArgsLen))
+		if lenargs !=4 {
+			c.WriteError(fmt.Sprintf("%s SET key value [expiration EX seconds|PX milliseconds]",ErrArgsLen))
 			return
-		}else{
-			ttl = time.Now().Add(time.Duration(t) * time.Millisecond).UnixNano()
 		}
+		xmode := c.args[2]
+		if xmode =="EX"{
+			t, ok := strconv.Atoi(c.args[3])
+			if ok != nil {
+				logger.Infoln(fmt.Sprintf("%s ttl is positive integer [ttl in milisecond]",ErrArgsLen))
+				c.WriteNull()
+
+				return
+			}else{
+				ttl = time.Now().Add(time.Duration(t) * time.Second).UnixNano()
+			}
+		}else if xmode=="PX"{
+			t, ok := strconv.Atoi(c.args[3])
+			if ok != nil {
+				logger.Infoln(fmt.Sprintf("%s ttl is positive integer [ttl in milisecond]",ErrArgsLen))
+				c.WriteNull()
+
+				return
+			}else{
+				ttl = time.Now().Add(time.Duration(t) * time.Millisecond).UnixNano()
+			}
+		}else{
+			c.WriteError(fmt.Sprintf("%s SET key value [expiration EX seconds|PX milliseconds]",ErrArgsLen))
+			return
+		}
+
 
 	}else{
 		ttl = 0
@@ -58,7 +81,9 @@ func (b *Bucket) SET(c RESPContext){
 		dtype:   0,
 		expired: false,
 	})
-	//
+
+
+
 	atomic.AddInt32(&b.changedNum,1)
 	c.WriteString("OK")
 	if b.modifyCallback != nil{
@@ -80,23 +105,22 @@ func (b *Bucket) GET (c RESPContext){
 
 	v, ok := b.Load(k)
 	if !ok {
-		c.WriteError(fmt.Sprintf("%s key  %s not exists ",ErrNotExists,k))
+		//logger.Infoln(fmt.Sprintf("%s key  %s not exists ",ErrNotExists,k))
 		// Not exists
-		//c.WriteNull()
+		c.WriteNull()
 		return
 	}
 	dv := v.(*Data)
 	if *evictionInterval == 0 && dv.TTL != 0  && dv.TTL < time.Now().UnixNano(){
 		//passive key eviction
 
-		c.WriteError(fmt.Sprintf("%s key  %s  expired ",ErrExpired,k))
-
+		//logger.Infoln(fmt.Sprintf("%s key  %s  expired ",ErrExpired,k))
 		b.Delete(k)
 		// key expired error -> not exists
-		//c.WriteNull()
+		c.WriteNull()
 		return
 	}
-	c.WriteString(dv.D.(string))
+	c.WriteBulkString(dv.D.(string))
 	return
 
 
@@ -134,7 +158,7 @@ func (b *Bucket) DELETE (c RESPContext){
 	return
 }
 
-//EXISTS <key>
+//EXISTS key [key ...]
 func (b *Bucket) EXISTS (c RESPContext){
 	lenargs := len(c.args)
 	existval :=0
@@ -219,12 +243,52 @@ func (b *Bucket) INCR (c RESPContext){
 	c.WriteInt(int(newd))
 	return
 }
+// EXPIRE key second
+func (b *Bucket)EXPIRE(c RESPContext){
+	lenargs := len(c.args)
 
+	if lenargs < 2 {
+		c.WriteError(fmt.Sprintf("%s EXPIRE has at least 2 arguments EXPIRE key second",ErrArgsLen))
+		return
+	}
 
+	v, ok := b.Load(c.args[0])
+	if !ok{
+		c.WriteInt(1)
+		return
+	}
+	ttl, castok := strconv.Atoi(c.args[1])
+	if castok!=nil{
+		c.WriteInt(0)
+		return
+	}
+	v.(*Data).TTL = time.Now().Add(time.Duration(ttl)*time.Second).UnixNano()
+	c.WriteInt(1)
+	return
+}
+// TTL key
+func (b *Bucket)TTL(c RESPContext){
+	lenargs := len(c.args)
 
-//MSET <key1> <value1> [<key2> <value2> ...].
+	if lenargs < 1 {
+		c.WriteError(fmt.Sprintf("%s TTL has 1 arguments TTL key",ErrArgsLen))
+		return
+	}
 
-//MGET <key1> [<key2> ...].
+	v,ok := b.Load(c.args[0])
+	if !ok{
+		c.WriteInt(-2)
+		return
+	}
+	if v.(*Data).TTL ==0{
+		c.WriteInt(-1)
+		return
+	}
+	realttl :=v.(*Data).TTL
+	remains := time.Unix(realttl-time.Now().UnixNano(),0).Second()
+	c.WriteInt(int(remains))
+	return
+}
 
 
 

@@ -23,17 +23,16 @@ func Serializemap(m sync.Map)([]byte, error){
 func UnSerializemap(data []byte)(sync.Map, error){
 	var tmpmap sync.Map
 	var a map[string][]byte
-	var v2 Data
 
 	e := json.Unmarshal(data,&a)
 	if e!=nil{
 		fmt.Println(e.Error())
 		panic(e)
 	}
-	for k,v := range(a){
+	for k,v := range a {
+		var v2 Data
 
 		e =json.Unmarshal(v,&v2)
-
 		if e!=nil{
 			fmt.Println(e.Error())
 			panic(e)
@@ -42,8 +41,7 @@ func UnSerializemap(data []byte)(sync.Map, error){
 			// key expired
 			continue
 		}
-
-		tmpmap.Store(k,v2)
+		tmpmap.Store(k,&v2)
 	}
 	return tmpmap, nil
 }

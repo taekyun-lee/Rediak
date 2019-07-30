@@ -5,7 +5,6 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 	"sync/atomic"
 	"time"
 )
@@ -21,7 +20,7 @@ KEYS [<regexp-pattern>]
 
 */
 
-//HSET <key> <field> <value> [<TTL "millisecond">] .
+//HSET <key> <field> <value>
 
 func (b *Bucket) HSET(c RESPContext){
 	// stronglock enabled
@@ -32,29 +31,19 @@ func (b *Bucket) HSET(c RESPContext){
 	lenargs := len(c.args)
 	var ttl int64
 	if lenargs <3 {
-		c.WriteError(fmt.Sprintf("%s HSET/HSETEX has at least 3 arguments HSET/HSETEX hkey key value [ttl in milisecond]",ErrArgsLen))
+		c.WriteError(fmt.Sprintf("%s HSET has exast 3 arguments HSET hkey key value ",ErrArgsLen))
 		return
 	}
 
 	hk, k,v := c.args[0], c.args[1], c.args[2]
 
-	if lenargs >3 {
-		t, ok := strconv.Atoi(c.args[3])
-		if ok != nil {
-			c.WriteError(fmt.Sprintf("%s ttl is positive integer [ttl in milisecond]",ErrArgsLen))
-			return
-		}else{
-			ttl = time.Now().Add(time.Duration(t) * time.Millisecond).UnixNano()
-		}
-
-	}else{
-		ttl = 0
-	}
-
+	ttl = 0
+	d := make(map[string]string,DEFAULTHASHSIZE)
+	d[k] = v
 	already, loaded := b.LoadOrStore(hk, &Data{
-		D:       v,
+		D:       d,
 		TTL:     ttl,
-		dtype:   1,
+		dtype:   21,
 		expired: false,
 	})
 
@@ -79,7 +68,7 @@ func (b *Bucket) HSET(c RESPContext){
 		return
 	}else{
 		b.Store(hk, &Data{
-			D:       v,
+			D:       d,
 			TTL:     ttl,
 			dtype:   21,
 			expired: false,
@@ -87,7 +76,7 @@ func (b *Bucket) HSET(c RESPContext){
 
 		//
 		atomic.AddInt32(&b.changedNum,1)
-		c.WriteInt(0)
+		c.WriteInt(1)
 		if b.modifyCallback != nil{
 			b.modifyCallback(c)
 		}
@@ -209,7 +198,7 @@ func (b *Bucket) HEXISTS (c RESPContext){
 	hashmap :=dv.D.(map[string]string)
 	_, ok = hashmap[c.args[1]]
 	if ok{
-		delete(hashmap, c.args[1])
+		//delete(hashmap, c.args[1])
 		c.WriteInt(1)
 		return
 	}

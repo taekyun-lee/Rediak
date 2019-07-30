@@ -53,8 +53,6 @@ func initRespServer(db *Bucket) error {
 				return
 			}
 
-			logger.Println(cmd.Args[0])
-			logger.Println(string(cmd.Raw))
 			if todo == "get"{
 				if string(cmd.Args[1]) == "yesclustertest"{
 					//conn.WriteRaw([]byte("-MOVED 3999 127.0.0.1:6381"))
