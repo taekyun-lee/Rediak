@@ -9,8 +9,8 @@
 
 ## Overview
 
-Redis protocol 을 이용한 (Distributed) in-memory key-value store 
-이 project는 Go 언어로 제작되었습니다.
+- Redis protocol 을 이용한 (Distributed) in-memory key-value store 
+- project는 Go 언어로 제작되었습니다.
 
 
 ## Install
