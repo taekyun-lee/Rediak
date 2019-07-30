@@ -53,7 +53,7 @@ go build -ldflags "-w" *.go
     
 
 
-## configuration
+## Configuration
 
 ```bash
 ./rediak -evict-interval second (some options...)
@@ -94,6 +94,15 @@ go build -ldflags "-w" *.go
 *consistent hashing for cluster*
 - https://github.com/buraksezer/consistent
 - MIT License
+
+## Contributing
+ - Sorry.
+ - I want to develop this project on my own this time.
+ - I know this project have lots of dirty code.
+ 
+## Issue
+- Please make new issue if you have to.
+
 
 
 ## License
