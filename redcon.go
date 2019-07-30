@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/go-redis/redis"
 	"strings"
 
 	"github.com/tidwall/redcon"
@@ -53,27 +52,6 @@ func initRespServer(db *Bucket) error {
 				return
 			}
 
-			if todo == "get"{
-				if string(cmd.Args[1]) == "yesclustertest"{
-					//conn.WriteRaw([]byte("-MOVED 3999 127.0.0.1:6381"))
-					client := redis.NewClient(&redis.Options{
-						Addr:     "127.0.0.1:6381",
-						Password: "", // no password set
-						DB:       0,  // use default DB
-					})
-					if conn.NetConn().LocalAddr().String() != client.Options().Addr{
-						args := append([]string{todo},args...)
-						newargs := make([]interface{},len(args))
-						for i,v :=range args{
-							newargs[i] = v
-						}
-						client.Do(newargs...)
-						logger.Println("-MOVED 3999 127.0.0.1:6381")
-						return
-					}
-
-				}
-			}
 
 
 			// find the required command in our registry
