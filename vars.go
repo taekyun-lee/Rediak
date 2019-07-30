@@ -11,7 +11,7 @@ var (
 	respaddr = flag.String("rediak-addr","127.0.0.1","the address of rediak server")
 	respport = flag.Int("rediak-port", 6380, "the port of rediak server")
 	evictionInterval = flag.Int("evict-interval",0,"Default interval of eviction, 0 means no active eviction")
-	Stronglock = flag.Bool("Strong-lock",false, "use mutex to all modification command,  ")
+	Stronglock = flag.Bool("Strong-lock",true, "use mutex to all modification command,  ")
 	numCore = flag.Int("num-core", runtime.NumCPU(),"number of cores using this instances")
 	restoreSnapshot = flag.String("restore-snapshot","","if restore needed, write absolute path of files( like /path/of/folder/file.rdb ) ")
 	storageDir = flag.String("storage-dir","./","Default persistent storage location /path/to/snapshotfolder")

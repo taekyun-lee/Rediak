@@ -937,3 +937,4 @@ MigrationBackup/
 tmp/
 refs/
 rediak
+testing/

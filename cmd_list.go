@@ -57,8 +57,8 @@ func (b *Bucket) LPUSH(c RESPContext){
 func (b *Bucket) LPOP(c RESPContext){
 	// stronglock enabled
 	if *Stronglock{
-		b.Lock()
-		defer b.Unlock()
+		b.RLock()
+		defer b.RUnlock()
 	}
 	lenargs := len(c.args)
 	if lenargs <1 {
@@ -102,8 +102,8 @@ func (b *Bucket) LPOP(c RESPContext){
 func (b *Bucket) LINDEX(c RESPContext){
 	// stronglock enabled
 	if *Stronglock{
-		b.Lock()
-		defer b.Unlock()
+		b.RLock()
+		defer b.RUnlock()
 	}
 	lenargs := len(c.args)
 	if lenargs <1 {
@@ -111,7 +111,7 @@ func (b *Bucket) LINDEX(c RESPContext){
 		return
 	}
 	k:= c.args[0]
-	i, castok := strconv.Atoi(c.args[0])
+	i, castok := strconv.Atoi(c.args[1])
 	if castok != nil{
 		c.WriteError(castok.Error())
 		return
@@ -121,22 +121,20 @@ func (b *Bucket) LINDEX(c RESPContext){
 
 	if ok{
 		if v.(*Data).dtype == 11{
-			lenlist := len( v.(*Data).D.([]string))
-			if lenlist-1 >= i{
-				x := v.(*Data).D.([]string)[i]
-				c.WriteString(x)
+			thislist := v.(*Data).D.([]string)
+			lenlist := len( thislist)
+			if i >=0 && i<lenlist {
+				c.WriteString( thislist[i] )
 				return
-			}else if i == -1 {
-				x := v.(*Data).D.([]string)[lenlist-1]
-				c.WriteString(x)
+
+			}else if i<0 && i>=-lenlist{
+				c.WriteString(thislist[lenlist+i])
 				return
-			} else{
+
+			}else{
 				c.WriteNull()
 				return
 			}
-
-
-
 		}
 		c.WriteError("not list type")
 		return
@@ -151,8 +149,8 @@ func (b *Bucket) LINDEX(c RESPContext){
 func (b *Bucket) LLEN(c RESPContext){
 	// stronglock enabled
 	if *Stronglock{
-		b.Lock()
-		defer b.Unlock()
+		b.RLock()
+		defer b.RUnlock()
 	}
 	lenargs := len(c.args)
 	if lenargs <1 {
@@ -165,11 +163,16 @@ func (b *Bucket) LLEN(c RESPContext){
 		c.WriteInt(0)
 		return
 	}else{
-		lenlist := len(v.(*Data).D.([]string))
-		c.WriteInt(lenlist)
-		atomic.AddInt32(&b.changedNum,1)
-		if b.modifyCallback != nil{
-			b.modifyCallback(c)
+		if v.(*Data).dtype == 11 {
+			lenlist := len(v.(*Data).D.([]string))
+			c.WriteInt(lenlist)
+			atomic.AddInt32(&b.changedNum, 1)
+			if b.modifyCallback != nil {
+				b.modifyCallback(c)
+			}
+		}else{
+			c.WriteError("not list type")
+			return
 		}
 		return
 	}
@@ -179,8 +182,8 @@ func (b *Bucket) LLEN(c RESPContext){
 func (b *Bucket) LRANGE(c RESPContext){
 	// stronglock enabled
 	if *Stronglock{
-		b.Lock()
-		defer b.Unlock()
+		b.RLock()
+		defer b.RUnlock()
 	}
 	lenargs := len(c.args)
 	if lenargs <3 {
@@ -225,8 +228,5 @@ func (b *Bucket) LRANGE(c RESPContext){
 	return
 
 }
-//LREM key count value
-//func (b *Bucket) LREM(c RESPContext){
-//
-//}
+
 
