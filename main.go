@@ -79,6 +79,7 @@ func main() {
 	// periodically write info
 	go func(){
 		t := time.NewTicker(time.Second*time.Duration(100))
+		t := time.NewTicker(time.Second*time.Duration(300))
 		for{
 			select {
 		case <-t.C:
