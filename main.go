@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
 	"os"
 	"runtime"
@@ -39,15 +38,6 @@ func main() {
 	err := make(chan error)
 
 	// TODO : consistent hashring
-	go (func() {
-		redisdb := redis.NewRing(&redis.RingOptions{
-			Addrs: map[string]string{
-				"shard1": ":7000",
-				"shard2": ":7001",
-				"shard3": ":7002",
-			},
-		})
-	})()
 
 
 
