@@ -1,5 +1,9 @@
 package main
 
+// This is not REAL go test, I just want to do test  with something.
+// The reason why I choose this name _test.go is just a cosmetic issue :)
+// Also, go run exclude _test.go files
+
 import (
 	"fmt"
 	"log"

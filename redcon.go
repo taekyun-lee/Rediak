@@ -1,7 +1,5 @@
-// Copyright 2018 The Redix Authors. All rights reserved.
-// Use of this source code is governed by a Apache 2.0
-// license that can be found in the LICENSE file.
-// Modify by Taekyun Lee 2019
+// Original code : https://github.com/alash3al/redix
+// Modifications copyright (C) 2019 Taekyun Lee
 package main
 
 import (

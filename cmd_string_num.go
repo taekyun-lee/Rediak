@@ -1,3 +1,7 @@
+
+// Original code : https://github.com/alash3al/redix
+// Modifications copyright (C) 2019 Taekyun Lee
+
 package main
 
 import (
