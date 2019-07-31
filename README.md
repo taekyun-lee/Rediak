@@ -1,16 +1,14 @@
 # Rediak 
-## [english README.md](https://github.com/taekyun-lee/Rediak/blob/master/README_en.md)
 - Distribute(work in progress) in-memory key-value store written in Go
-- http://d2campusfest.kr/7th/
 - (wanna) fast NoSQL DB uses RESP (REdis Serialization Protocol).
-- Goroutine 을 사용한 multi-thread key-value store
+- multi-thread key-value store using goroutine
 - Sync.map 
 - Making your own custom RESP-based command available
 
 ## Overview
 
-- Redis protocol 을 이용한 (Distributed) in-memory key-value store 
-- project는 Go 언어로 제작되었습니다.
+-(Distributed) in-memory key-value store 
+- Compatible with RESP protocol(some commands only, see below)
 
 
 ## Install
@@ -19,8 +17,9 @@ go build -ldflags "-w" *.go
 ```
 
 ## Usage
-### Same as redis, Redis-cli 로 실행함.
-- RESP(REdis Serialization Protocol) 사용으로 redis-cli 사용 가능
+### Redis compatible use like redis,
+- In some commands only though... this project is my summer projects and currently working on
+
 
 ### Current implemented command
 
@@ -51,7 +50,6 @@ go build -ldflags "-w" *.go
     - [x] gc (execute GC )
     - [x] exit
     
-
 
 ## Configuration
 
