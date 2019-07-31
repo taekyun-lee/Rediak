@@ -25,6 +25,7 @@ func initRespServer(db *Bucket) error {
 					conn.WriteError(fmt.Sprintf("fatal error: %s", (err.(error)).Error()))
 				}
 			})()
+
 			//ctx := (conn.Context()).(map[string]interface{})
 			todo := strings.TrimSpace(strings.ToLower(string(cmd.Args[0])))
 			args := []string{}
